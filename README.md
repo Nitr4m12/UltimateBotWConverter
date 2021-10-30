@@ -2,11 +2,12 @@
 A script that convert WiiU BotW mods to Switch. It uses every resource I could find under the sun that allows for conversion, with some modifications to accomodate for the central script. ONLY `converter.py` IS COMPLETELY MADE BY ME, THE ORIGINAL AUTHORS STILL DESERVE ALL THE CREDIT FOR THEIR WORK.
 
 # Requirements
-- Python 3.7 or 3.8
+- Python 3.7 or 3.8 (If on Windows, you must check `Add Python to PATH` during installation)
+- A legal, unpacked dump of BoTW Switch (1.6.0)
 - BCML
 - leoetlino's sarc tool
 
-Both can be obtained through Python's pip, using `pip install bcml` for BCML, and `pip install sarc` for leoetlino's tool. 
+The last two can be obtained through Python's pip, using `pip install bcml` for BCML, and `pip install sarc` for leoetlino's tool. 
 **Important**: BCML must be set up with a Switch dump of BoTW and put in Switch mode, or the script won't work. Also, this script doesn't modify files inside `TitleBG.pack`, so those you'll still have to manually modify yourself.
 
 # Usage
