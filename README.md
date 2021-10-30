@@ -11,7 +11,8 @@ The last two can be obtained through Python's pip, using `pip install bcml` for 
 **Important**: BCML must be set up and put in Switch mode, or the script won't work. Also, this script doesn't modify files inside `TitleBG.pack`, so you'll have to manually port those yourself.
 
 # Usage
-Open CMD on Windows or a Terminal window on Linux, and run the script with `python converter.py [mod]`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder.
+**Linux:**
+Open a Terminal window in the script's folder, and run the script with `python converter.py [mod]`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder.
 
 # Added supported formats
 BCML converter is still limited, so using other tools to convert those is our only option for now. With this script, I've added this formats to the supported list:
