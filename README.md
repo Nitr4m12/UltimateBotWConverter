@@ -13,6 +13,8 @@ The last two can be obtained through Python's pip, using `pip install bcml` for 
 # Usage
 **Linux:**
 Open a Terminal window in the script's folder, and run the script with `python converter.py [mod]`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder.
+**Windows**
+Drag and drop your BNP into the included bat file
 
 # Added supported formats
 BCML converter is still limited, so using other tools to convert those is our only option for now. With this script, I've added this formats to the supported list:
