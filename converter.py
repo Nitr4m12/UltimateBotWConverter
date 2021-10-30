@@ -13,7 +13,7 @@ from platform import system
 from RepackBars import repack_bars
 
 import shutil
-import bars_convertor as barstool
+import bars_extractor as barstool
 import bcfconverter as sound
 import argparse
 import bfstpfixer
