@@ -19,4 +19,4 @@ BCML converter is still limited, so using other tools to convert those is our on
 - `.sbfres` (animations are untested, but I'm guessing there would be some problems)
 - `.sbitemico`
 - `.hkcl`
-- `instSize`s in `ActorInfo.product.sbyml`
+- `instSizes` in `ActorInfo.product.sbyml`
