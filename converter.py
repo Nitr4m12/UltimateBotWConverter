@@ -5,7 +5,7 @@ from bcml import util
 from subprocess import run
 from os.path import sep, splitext
 from glob import glob
-from urllib.request import urlopen, urlretrieve, urlcleanup
+from urllib.request import urlopen, urlretrieve
 from io import BytesIO
 from zipfile import ZipFile
 from oead import byml, S32
@@ -92,34 +92,43 @@ def convertBars(file, mod_root):
     shutil.rmtree(f'{file.parent}{sep}new')
 
 def converter(mod):
-    bnp = Path(mod)
-    mod_path = open_mod(bnp)
-    files = mod_path.glob(f'**{sep}*.*')
-    game_path = util.get_game_dir()
-    # Run the mod through BCML's automatic converter first 
-    warnings = convert_mod(mod_path, False, True)
-    for file in files:
-        if file.suffix == ".sbfres" or file.suffix == ".sbitemico":
-            convertFres(file)
-        elif file.suffix == ".sbactorpack":
-            actorfiles = run(['sarc', 'list', file], capture_output=True, text=True)
-            if 'hkcl' in actorfiles.stdout:
-                convertHavok(file, mod_path)
-        elif file.suffix == ".bars":
-            convertBars(file, mod_path)
-        elif file.suffix == ".bfstm":
-            # Convert BFSTM files
-            sound.convExtFile(file, "FSTM", '<')
-        elif file.name == "actorinfo.yml":
-            convertInstS(file)
-    out = bnp.with_name(f"{bnp.stem}_switch.bnp")
-    x_args = [
-        util.get_7z_path(),
-        "a",
-        out,
-        f'{str(mod_path / "*")}',
-    ]
-    run(x_args)
+    try:
+        bnp = Path(mod)
+        mod_path = open_mod(bnp)
+        files = mod_path.glob(f'**{sep}*.*')
+        game_path = util.get_game_dir()
+        # Run the mod through BCML's automatic converter first 
+        warnings = convert_mod(mod_path, False, True)
+        for file in files:
+            if file.suffix == ".sbfres" or file.suffix == ".sbitemico":
+                convertFres(file)
+            elif file.suffix == ".sbactorpack":
+                actorfiles = run(['sarc', 'list', file], capture_output=True, text=True)
+                if 'hkcl' in actorfiles.stdout:
+                    convertHavok(file, mod_path)
+            elif file.suffix == ".bars":
+                convertBars(file, mod_path)
+            elif file.suffix == ".bfstm":
+                # Convert BFSTM files
+                sound.convExtFile(file, "FSTM", '<')
+            elif file.name == "actorinfo.yml":
+                convertInstS(file)
+        out = bnp.with_name(f"{bnp.stem}_switch.bnp")
+        x_args = [
+            util.get_7z_path(),
+            "a",
+            out,
+            f'{str(mod_path / "*")}',
+        ]
+        run(x_args)
+    except RuntimeError as e:
+        shutil.rmtree(mod_path, ignore_errors=True)
+        if Path('HKXConvert').exists():
+            Path('HKXConvert').unlink()
+        shutil.rmtree('SwitchConverted', ignore_errors=True)
+        shutil.rmtree('WiiUConverted', ignore_errors=True)
+        shutil.rmtree('BfresPlatformConverter', ignore_errors=True)
+        print(e)
 
     shutil.rmtree(mod_path, ignore_errors=True)
     if Path('HKXConvert').exists():
