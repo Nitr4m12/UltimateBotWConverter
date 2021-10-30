@@ -1,2 +1,22 @@
 # UltimateBoTWConverter
-A script that convert WiiU BotW mods to Switch
+A script that convert WiiU BotW mods to Switch. It uses every resource I could find under the sun that allows for conversion, as well as some modifications to accomodate for the central script. ONLY `converter.py` IS COMPLETELY MADE BY ME, THE ORIGINAL AUTHORS STILL DESERVE ALL THE CREDIT FOR THEIR WORK.
+
+# Requirements
+- Python
+- BCML
+- leoetlino's sarc tool
+
+Both can be obtained through Python's pip, using `pip install bcml` for BCML, and `pip install sarc` for leoetlino's tool. 
+**Important**: BCML must be set up with a Switch dump of BoTW and put in Switch mode, or the script won't work.
+
+# Usage
+Open CMD on Windows or a Terminal window on Linux, and run the script with `python converter.py [mod]`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder.
+
+# Added supported formats
+BCML converter is still limited, so using other tools to convert those is our only option for now. With this script, I've added this formats to the supported list:
+- `.bars`
+- `.bfstm`
+- `.sbfres` (animations are untested, but I'm guessing there would be some problems)
+- `.sbitemico`
+- `.hkcl`
+- `instSizes` in `ActorInfo.product.sbyml`
