@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/python3
 
-"""bars_extractor.py: Extracts BFWAV files from Wii U (and possible 3DS, but this is untested) BARS files"""
+"""bars_extractor.py: Extracts BFWAV files from Switch and Wii U (and possibly 3DS, but this is untested) BARS files"""
 
 __author__ = "Nitr4m12(forked from Peter Wunder (@SamusAranX))"
 __license__ = "WTFPL"
