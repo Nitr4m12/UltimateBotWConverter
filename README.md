@@ -1,5 +1,5 @@
 # UltimateBoTWConverter
-A script that convert WiiU BotW mods to Switch. It uses every resource I could find under the sun that allows for conversion, as well as some modifications to accomodate for the central script. ONLY `converter.py` IS COMPLETELY MADE BY ME, THE ORIGINAL AUTHORS STILL DESERVE ALL THE CREDIT FOR THEIR WORK.
+A script that convert WiiU BotW mods to Switch. It uses every resource I could find under the sun that allows for conversion, with some modifications to accomodate for the central script. ONLY `converter.py` IS COMPLETELY MADE BY ME, THE ORIGINAL AUTHORS STILL DESERVE ALL THE CREDIT FOR THEIR WORK.
 
 # Requirements
 - Python
