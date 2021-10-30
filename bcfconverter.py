@@ -442,6 +442,23 @@ def STMtoSTM(f, magic, dest, dest_bom):
                         outputBuffer[pos + i:pos + i + 2] = bytes([
                             seek.data_[i+1], seek.data_[i],
                         ])
+                        
+            elif sized_refs[i].type_ == 0x4003:
+                pos = sized_refs[i].offset
+                regn = BLKHeader(bom)
+                regn.data(f, pos)
+                outputBuffer[pos:pos + regn.size] = bytes(BLKHeader(dest_bom).pack(regn.magic, regn.size_))
+                pos += regn.size
+                regn.data_ = f[pos:pos + regn.size_ - 8]
+
+                if curr[:-1] == dest[:-1]:
+                    outputBuffer[pos:pos + regn.size_ - 8] = regn.data_
+
+                else:
+                    for i in range(0, len(regn.data_), 2):
+                        outputBuffer[pos + i:pos + i + 2] = bytes([
+                            regn.data_[i+1], regn.data_[i],
+                        ])
 
             elif sized_refs[i].type_ in [0x4002, 0x4004]:
                 pos = sized_refs[i].offset
