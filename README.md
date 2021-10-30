@@ -1,5 +1,5 @@
 # UltimateBoTWConverter
-A script that convert WiiU BotW mods to Switch. It uses every resource I could find under the sun that allows for conversion, with some modifications to accomodate for the central script. Thanks to HGStone and Törphedo for creating a bat script. ONLY `converter.py` IS COMPLETELY MADE BY ME, THE ORIGINAL AUTHORS STILL DESERVE ALL THE CREDIT FOR THEIR WORK.
+A script that convert WiiU BotW mods to Switch. It uses every resource I could find under the sun that allows for conversion, with some modifications to accomodate for the central script. Thanks to HGStone and Törphedo for creating the bat script, and HGStone for testing as well. ONLY `converter.py` IS COMPLETELY MADE BY ME, THE ORIGINAL AUTHORS STILL DESERVE ALL THE CREDIT FOR THEIR WORK.
 
 # Requirements
 - Python 3.7 or 3.8 (If on Windows, you must check `Add Python to PATH` during installation)
@@ -12,7 +12,7 @@ The last two can be obtained through Python's pip, using `pip install bcml` for 
 
 # Usage
 **Linux:**
-Open a Terminal window in the script's folder, and run the script with `python converter.py [mod]`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder.
+Open a Terminal window in the script's folder, and run the script with either `python converter.py "mod"` or `convert.sh "mod"`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder.
 **Windows**
 Drag and drop your BNP into the included bat file
 
