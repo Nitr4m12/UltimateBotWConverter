@@ -21,3 +21,5 @@ BCML converter is still limited, so using other tools to convert those is our on
 - `.sbitemico`
 - `.hkcl`
 - `instSizes` in `ActorInfo.product.sbyml`
+
+It's worth considering that I'm still new to python, so any feedback is appreciated.
