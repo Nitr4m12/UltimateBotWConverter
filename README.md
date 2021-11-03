@@ -23,7 +23,7 @@ Drag and drop your BNP into the included bat file
 BCML's converter is still limited, so using other tools to convert those files that it can't is our only option for now. With this script, I've automated the process of using those other tools and added these formats to the supported list:
 - `.bars`
 - `.bfstm`
-- `.sbfres` (animations are untested, but I'm guessing there would be some problems)
+- `.sbfres` (animations are untested)
 - `.sbitemico`
 - `.hkcl`
 - `.hkrg`
