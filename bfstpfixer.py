@@ -1,3 +1,5 @@
+# Original by NanobotZ
+
 import os
 import sys
 import struct
@@ -63,19 +65,3 @@ def fix(full_path): # returns true if fixer didn't have any problems
 	file.write(data)
 	file.close()
 	return True
-
-# if __name__ == '__main__':
-# 	len_arg = len(sys.argv)
-	
-# 	any_error = False
-	
-# 	if len_arg == 1:
-# 		print("Usage: Please specify the input file(s) as argument(s)")
-# 		any_error = True
-# 	else:
-# 		for x in range(1, len_arg):
-# 			if not fix(sys.argv[x]):
-# 				any_error = True
-	
-# 	if any_error:
-# 		time.sleep(3)
