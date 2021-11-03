@@ -1,14 +1,9 @@
 # Aaaboy97 2018
+# Modified by Nitr4m12
 
 
 import os
 import shutil
-# import sys
-
-# if len(sys.argv) != 4:
-#     print('Incorrect arguments for running')
-#     print('Usage: bars_repack.py <bars file> <original folder> <new folder>')
-#     exit()
 
 def repack_bars(bars, old, new):
     f_name, f_ext = os.path.splitext(str(bars))
