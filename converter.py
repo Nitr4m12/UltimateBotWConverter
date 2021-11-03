@@ -115,12 +115,19 @@ def convert_bars(bars: Path, mod_root: Path) -> None:
     try:
         o_bars = util.get_game_file(f"Voice{sep}USen{sep}{bars.name}").read_bytes()
     except FileNotFoundError:
-        pack_path = util.get_game_file(f'Pack{sep}{bars.parent.parent.parent.name}')
+        o_bars = util.get_game_file(f"Sound{sep}Resource{sep}{bars.name}").read_bytes()
+    except FileNotFoundError:
+        bg_path = bars.parent.parent.parent.name
+        pack_path = util.get_game_file(f'Pack{sep}{bg_path}')
         pack = oead.Sarc(pack_path.read_bytes())
         o_bars = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1]).data
     barstool.extract_from_bars(bars, '>')
-    bfstps = mod_root.rglob('*.bfstp')
-    bfwavs = mod_root.rglob('*.bfwav')
+    try:
+        bfstps = Path(bg_path).rglob('*.bfstp')
+        bfwavs = Path(bg_path).rglob('*.bfwav')
+    except:
+        bfstps = mod_root.rglob('*.bfstp')
+        bfwavs = mod_root.rglob('*.bfwav')
     for bfstp in bfstps:
         sound.convExtFile(bfstp, 'FSTP', '<')
         bfstpfixer.fix(bfstp)
