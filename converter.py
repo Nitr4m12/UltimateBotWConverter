@@ -173,13 +173,15 @@ def convert_files(files, mod_path: Path) -> None:
 
         elif file.suffix == ".pack" or file.suffix == ".sbeventpack":
             # Convert files inside of pack files
-            pack = oead.Sarc(file.read_bytes())
-            pack_path = Path(f'{file.name}')
-            if any(splitext(i.name)[1] in supp_formats for i in pack.get_files()):
-                extract_sarc(pack, pack_path)
-                convert_files(pack_path.rglob('*.*'), mod_path)
-                write_sarc(pack, pack_path, file)
-                shutil.rmtree(pack_path)
+            if file.name != "AocMainField.pack":
+                pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
+                pack = oead.Sarc(file.read_bytes())
+                pack_path = Path(f'{file.name}')
+                if any(splitext(i.name)[1] in supp_formats for i in pack.get_files()):
+                    extract_sarc(pack, pack_path)
+                    convert_files(pack_path.rglob('*.*'), mod_path)
+                    write_sarc(pack, pack_path, file)
+                    shutil.rmtree(pack_path)
 
         elif file.suffix == ".sblarc":
             # Convert bflim files inside of sblarc files
