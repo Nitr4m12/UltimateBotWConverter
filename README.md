@@ -31,13 +31,13 @@ BCML converter is still limited, so using other tools to convert those is our on
 - `instSizes` in `ActorInfo.product.sbyml`
 
 # Credits 
-AboodXD - BCFSTM-BCFWAV Converter, BNTX Injector, Bflim Extractor
-NanobotZ - bfstpfixer.py
-SamusAranX - Original bars_extractor.py script
-Aaaboy97 - Bars repacker script
-KillzXGaming - BfresPlatformConverter
-kreny - HKXConvert
-NiceneNerd - BOTW Cross-Platform Mod Loader
-Nitr4m12 - UltimateBoTWConverter
+- AboodXD - BCFSTM-BCFWAV Converter, BNTX Injector, Bflim Extractor
+- NanobotZ - bfstpfixer.py
+- SamusAranX - Original bars_extractor.py script
+- Aaaboy97 - Bars repacker script
+- KillzXGaming - BfresPlatformConverter
+- kreny - HKXConvert
+- NiceneNerd - BOTW Cross-Platform Mod Loader
+- Nitr4m12 - UltimateBoTWConverter
 
 It's worth considering that I'm still new to Python, so any feedback is appreciated!
