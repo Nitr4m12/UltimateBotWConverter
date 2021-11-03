@@ -43,7 +43,7 @@ def write_sarc(sarc: oead.Sarc, sarc_path: Path, sarc_file: Path) -> None:
     for file in sarc_path.rglob("*.*"):
         new_file = f'{file}'.split(f"{sarc_file.name}{sep}")[1]
         new_sarc.files[new_file] = file.read_bytes()
-    if sarc_file.suffix = ".pack":
+    if sarc_file.suffix == ".pack":
         sarc_file.write_bytes(new_sarc.write()[1])
     else:
         sarc_file.write_bytes(oead.yaz0.compress(new_sarc.write()[1]))
