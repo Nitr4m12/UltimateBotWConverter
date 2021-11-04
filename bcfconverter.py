@@ -71,6 +71,26 @@ class STMInfo(struct.Struct):  # Stream Info
          self.seek_size,
          self.SISC) = self.unpack_from(data, pos)
 
+class STMInfoR(struct.Struct):  # Stream Info
+    def __init__(self, bom):
+        super().__init__(bom + '4B11I')
+
+    def data(self, data, pos):
+        (self.codec,
+         self.loop_flag,
+         self.count,
+         self.rcount,
+         self.sample,
+         self.loop_start,
+         self.loop_end,
+         self.sampleBlk_count,
+         self.sampleBlk_size,
+         self.sampleBlk_sampleCount,
+         self.lSampleBlk_size,
+         self.lSampleBlk_sampleCount,
+         self.lSampleBlk_padSize,
+         self.seek_size,
+         self.SISC) = self.unpack_from(data, pos)
 
 class WAVInfo(struct.Struct):  # Stream Info
     def __init__(self, bom):
@@ -121,6 +141,18 @@ class Ref(struct.Struct):  # Reference
     def data(self, data, pos):
         (self.type_,
          self.offset) = self.unpack_from(data, pos)
+
+class REGNInfo(struct.Struct):
+    def __init__(self, bom):
+        super().__init__(bom + 'H2xH2xi3I')
+    
+    def data(self, data, pos):
+        (self.reg_size,
+         self.reg_flag,
+         self.reg_offset,
+         self.loop_st,
+         self.loop_ed,
+         self.secret) = self.unpack_from(data, pos)
 
 def convExtFile(fname, dest, dest_bom):
     # Convert external file
@@ -299,22 +331,41 @@ def STMtoSTM(f, magic, dest, dest_bom):
         sys.exit(1)
 
     pos = stmInfo_ref.offset + stmInfo_ref.pos
-    stmInfo = STMInfo(bom)
-    stmInfo.data(f, pos)
+    if header.numBlocks == 3:
+        stmInfo = STMInfo(bom)
+        stmInfo.data(f, pos)
 
-    outputBuffer[pos:pos + stmInfo.size] = bytes(
-        STMInfo(dest_bom).pack(stmInfo.codec, stmInfo.loop_flag, stmInfo.count, stmInfo.sample, stmInfo.loop_start,
-                               stmInfo.loop_end, stmInfo.sampleBlk_count, stmInfo.sampleBlk_size,
-                               stmInfo.sampleBlk_sampleCount, stmInfo.lSampleBlk_size, stmInfo.lSampleBlk_sampleCount,
-                               stmInfo.lSampleBlk_padSize, stmInfo.seek_size, stmInfo.SISC))
+        outputBuffer[pos:pos + stmInfo.size] = bytes(
+            STMInfo(dest_bom).pack(stmInfo.codec, stmInfo.loop_flag, stmInfo.count, stmInfo.sample, stmInfo.loop_start,
+                                stmInfo.loop_end, stmInfo.sampleBlk_count, stmInfo.sampleBlk_size,
+                                stmInfo.sampleBlk_sampleCount, stmInfo.lSampleBlk_size, stmInfo.lSampleBlk_sampleCount,
+                                stmInfo.lSampleBlk_padSize, stmInfo.seek_size, stmInfo.SISC))
+        pos += stmInfo.size
+    else:
+        stmInfo = STMInfoR(bom)
+        stmInfo.data(f, pos)
 
-    pos += stmInfo.size
+        outputBuffer[pos:pos + stmInfo.size] = bytes(
+            STMInfoR(dest_bom).pack(stmInfo.codec, stmInfo.loop_flag, stmInfo.count, stmInfo.rcount, stmInfo.sample, stmInfo.loop_start,
+                                stmInfo.loop_end, stmInfo.sampleBlk_count, stmInfo.sampleBlk_size,
+                                stmInfo.sampleBlk_sampleCount, stmInfo.lSampleBlk_size, stmInfo.lSampleBlk_sampleCount,
+                                stmInfo.lSampleBlk_padSize, stmInfo.seek_size, stmInfo.SISC))
+        pos += stmInfo.size
+
 
     sampleData_ref = Ref(bom)
     sampleData_ref.data(f, pos)
 
     outputBuffer[pos:pos + sampleData_ref.size] = bytes(Ref(dest_bom).pack(sampleData_ref.type_, sampleData_ref.offset))
     pos += 8
+
+    if hasattr(stmInfo, 'rcount'):
+        stmInfo.rcount
+        regInfo = REGNInfo(bom)
+        regInfo.data(f, pos)
+
+        outputBuffer[pos:pos + regInfo.size] = bytes(REGNInfo(dest_bom).pack(regInfo.reg_size, regInfo.reg_flag, regInfo.reg_offset, regInfo.loop_st, regInfo.loop_ed, regInfo.secret))
+        pos += regInfo.size
 
     trkInfoTable = {}
     trkInfo = {}
@@ -435,30 +486,43 @@ def STMtoSTM(f, magic, dest, dest_bom):
                 seek.data_ = f[pos:pos + seek.size_ - 8]
 
                 if curr[:-1] == dest[:-1]:
-                    outputBuffer[pos:pos + seek.size_ - 8] = seek.data_
-
-                else:
                     for i in range(0, len(seek.data_), 2):
                         outputBuffer[pos + i:pos + i + 2] = bytes([
                             seek.data_[i+1], seek.data_[i],
                         ])
+
+                else:
+                    outputBuffer[pos:pos + seek.size_ - 8] = seek.data_
                         
             elif sized_refs[i].type_ == 0x4003:
                 pos = sized_refs[i].offset
                 regn = BLKHeader(bom)
                 regn.data(f, pos)
                 outputBuffer[pos:pos + regn.size] = bytes(BLKHeader(dest_bom).pack(regn.magic, regn.size_))
-                pos += regn.size
-                regn.data_ = f[pos:pos + regn.size_ - 8]
+                pos += 32
+                regn.data_ = f[pos:pos + regn.size_ - 32]
 
-                if curr[:-1] == dest[:-1]:
-                    outputBuffer[pos:pos + regn.size_ - 8] = regn.data_
+                if bom != dest_bom:
+                    for i in range(0, len(regn.data_), regInfo.reg_size):
+                        j = 0
+                        step = 2
+                        while j < regInfo.reg_size:
+                            if j < 8:
+                                step = 4
+                                outputBuffer[pos + j:pos + j + 4] = bytes([
+                                    regn.data_[i+j+3], regn.data_[i+j+2], regn.data_[i+j+1], regn.data_[i+j],
+                                ])
+                            else:
+                                step = 2
+                                outputBuffer[pos + j:pos + j + 2] = bytes([
+                                    regn.data_[i+j+1], regn.data_[i+j],
+                                ])
+                            
+                            j += step
+                        pos += regInfo.reg_size
 
                 else:
-                    for i in range(0, len(regn.data_), 2):
-                        outputBuffer[pos + i:pos + i + 2] = bytes([
-                            regn.data_[i+1], regn.data_[i],
-                        ])
+                    outputBuffer[pos:pos + regn.size_ - 8] = regn.data_
 
             elif sized_refs[i].type_ in [0x4002, 0x4004]:
                 pos = sized_refs[i].offset
