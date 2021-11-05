@@ -2,7 +2,6 @@ import bflim_convertor.bntx as BNTX
 from pathlib import Path
 import bflim_convertor.bflim_extract as bflim_extract
 import bflim_convertor.addrlib as addrlib
-# Variables and functions = snake_case
 
 def tex_inject(bntx: Path, bflim: Path, import_mips: bool):
     # Read the bflim file
