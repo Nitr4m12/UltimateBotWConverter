@@ -12,7 +12,7 @@ def fix(full_path): # returns true if fixer didn't have any problems
 		print("Couldn't find the file, wrong path: " + file_name)
 		return False
 	
-	if full_path[-6:] != ".bfstp":
+	if file_name[-6:] != ".bfstp":
 		print("Wrong file extension: " + file_name)
 		return False
 		
