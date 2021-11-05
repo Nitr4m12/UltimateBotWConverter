@@ -130,13 +130,13 @@ def convert_instS(ainfo: Path) -> None:
 def convert_bars(bars: Path, mod_root: Path) -> None:
     # Convert bars files, and their files inside
     try:
-        o_bars = util.get_game_file(f"Voice{sep}USen{sep}{bars.name}").read_bytes()
+        o_bars = util.get_game_file(f"Voice/USen/{bars.name}").read_bytes()
     except FileNotFoundError:
         try:
-            o_bars = util.get_game_file(f"Sound{sep}Resource{sep}{bars.name}").read_bytes()
+            o_bars = util.get_game_file(f"Sound/Resource/{bars.name}").read_bytes()
         except FileNotFoundError:
             bg_path = bars.parent.parent.parent.name
-            pack_path = util.get_game_file(f'Pack{sep}{bg_path}')
+            pack_path = util.get_game_file(f'Pack/{bg_path}')
             pack = oead.Sarc(pack_path.read_bytes())
             o_bars = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1]).data
 
@@ -163,7 +163,7 @@ def convert_bflim(sblarc: Path):
     blarc = oead.Sarc(util.unyaz_if_needed(sblarc.read_bytes()))
     blarc_path = Path(sblarc.name)
     if any("bflim" in i.name for i in blarc.get_files()):
-        stock_pack = util.get_game_file(f"Pack{sep}{sblarc.parent.parent.name}")
+        stock_pack = util.get_game_file(f"Pack/{sblarc.parent.parent.name}")
         try:
             stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file(f"Layout{sep}Common.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
