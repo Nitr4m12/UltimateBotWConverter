@@ -28,7 +28,7 @@ parser.add_argument("mods", nargs='+')
 args = parser.parse_args()
 
 # Supported formats
-supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".bars", ".bfstm", ".bflim", ".sblarc", "instSize"]
+supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".bars", ".bfstm", ".bflim", ".sblarc"]
 
 def confirm_prompt(question: str) -> bool:
     # https://gist.github.com/garrettdreyfus/8153571
