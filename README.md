@@ -28,7 +28,6 @@ BCML's converter is still limited, so using other tools to convert those files t
 - `.hkcl`
 - `.hkrg`
 - `.bflim` (these are inside sblarc files)
-- `instSizes` in `ActorInfo.product.sbyml`
 
 # Credits 
 - AboodXD - BCFSTM-BCFWAV Converter, BNTX Injector, Bflim Extractor
