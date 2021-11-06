@@ -130,10 +130,7 @@ def convert_bars(bars: Path, mod_root: Path) -> None:
             bg_path = bars.parent.parent.parent.name
             pack_path = util.get_game_file(f'Pack/{bg_path}')
             pack = oead.Sarc(pack_path.read_bytes())
-            if system() == "Windows":
-                o_bars = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1].replace("\\", "/")).data
-            else:
-                o_bars = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1]).data
+            o_bars = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1].replace("\\", "/")).data
                 
     barstool.extract_from_bars(bars, '>')
     try:
