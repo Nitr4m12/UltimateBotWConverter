@@ -35,7 +35,7 @@ def confirm_prompt(question: str) -> bool:
     reply = None
     while reply not in ("", "y", "n"):
         reply = input(f"{question} (Y/n): ").lower()
-    return (reply in ("", "N"))
+    return (reply in ("", "y"))
 
 def extract_sarc(sarc: oead.Sarc, sarc_path: Path) -> None:
     Path(sarc_path).mkdir(exist_ok=True)
@@ -271,7 +271,7 @@ def main() -> None:
     	mods = args.mods
 
     downloaded = False
-    if Path('BfresPlatformConverter').exists() and Path('HKXConvert').exists():
+    if Path('BfresPlatformConverter').exists() and (Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()):
         downloaded = True
 
     # Set BCML to Switch mode
@@ -282,7 +282,7 @@ def main() -> None:
     for mod in mods:
         convert(mod)
 
-    if (Path('BfresPlatformConverter').exists() or Path('HKXConvert').exists()) and not downloaded:
+    if (Path('BfresPlatformConverter').exists() or Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()) and not downloaded:
         reply = confirm_prompt("Would you like to keep the downloaded files?")
         if not reply:
             clean_up()
