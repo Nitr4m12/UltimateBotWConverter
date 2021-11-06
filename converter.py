@@ -78,7 +78,7 @@ def convert_fres(sbfres: Path) -> None:
         sbfres.write_bytes(bfres)
 
     if system() == "Windows":
-        run(["BfresPlatformConverter\BfresPlatformConverter.exe", sbfres])
+        run(["BfresPlatformConverter\\BfresPlatformConverter.exe", sbfres])
     else:
         run(['mono', "BfresPlatformConverter/BfresPlatformConverter.exe", sbfres])
 
