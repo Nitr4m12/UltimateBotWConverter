@@ -160,12 +160,12 @@ def convert_bflim(sblarc: Path):
     if any("bflim" in i.name for i in blarc.get_files()):
         stock_pack = util.get_game_file(f"Pack/{sblarc.parent.parent.name}")
         try:
-            stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file(f"Layout{sep}Common.sblarc")
+            stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Common.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
         except (oead.InvalidDataError, AttributeError):
-            stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file(f"Layout{sep}Title.sblarc")
+            stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Title.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
-        bntx_file = stock_blarc.get_file(f"timg{sep}__Combined.bntx")
+        bntx_file = stock_blarc.get_file(f"timg/__Combined.bntx")
         extract_sarc(blarc, blarc_path)
         Path(blarc_path / f'{bntx_file.name}').write_bytes(bntx_file.data)
         for bflim in blarc_path.rglob('*.bflim'):
