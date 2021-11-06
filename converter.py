@@ -130,7 +130,10 @@ def convert_bars(bars: Path, mod_root: Path) -> None:
             bg_path = bars.parent.parent.parent.name
             pack_path = util.get_game_file(f'Pack/{bg_path}')
             pack = oead.Sarc(pack_path.read_bytes())
-            o_bars = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1]).data
+            print(f'The bars file is at: {bars}')
+            print(f'The pack name is:{pack_path.name}')
+            o_bars2 = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1])
+            o_bars = o_bars2.data
 
     barstool.extract_from_bars(bars, '>')
     try:
