@@ -119,14 +119,6 @@ def convert_havok(actorpack: Path) -> None:
         write_sarc(actor, actor_path, actorpack)
     shutil.rmtree(actor_path)
 
-def convert_instS(ainfo: Path) -> None:
-    # Convert any instSize entries, if any are modified
-    actorinfo = oead.byml.from_text(open(ainfo, "r", encoding="utf-8").read()) 
-    for _, actor in actorinfo.items():
-        if "instSize" in actor:
-            actor["instSize"] = oead.S32(int(actor["instSize"].v * 1.6)) 
-    open(ainfo, "w", encoding="utf-8").write(oead.byml.to_text(actorinfo))
-
 def convert_bars(bars: Path, mod_root: Path) -> None:
     # Convert bars files, and their files inside
     try:
@@ -217,10 +209,6 @@ def convert_files(files, mod_path: Path) -> None:
 
             elif file.suffix == ".hkcl":
                 convert_havok(file)
-                
-            elif file.name == "actorinfo.yml":
-                # Convert instSizes inside of the actorinfo
-                convert_instS(file)
 
 def clean_up():
     if Path('HKXConvert').exists():
