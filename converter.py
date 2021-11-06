@@ -48,7 +48,7 @@ def write_sarc(sarc: oead.Sarc, sarc_path: Path, sarc_file: Path) -> None:
     # Write the modified files back to the sarc
     new_sarc = oead.SarcWriter(endian=oead.Endianness.Little)
     for file in sarc_path.rglob("*.*"):
-        new_file = f'{file}'.split(f"{sarc_file.name}{sep}")[1]
+        new_file = f'{file}'.split(f"{sarc_file.name}{sep}")[1].replace("\\", "/")
         new_sarc.files[new_file] = file.read_bytes()
     if sarc_file.suffix == ".pack":
         sarc_file.write_bytes(new_sarc.write()[1])
