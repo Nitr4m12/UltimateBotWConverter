@@ -14,8 +14,8 @@ from bflim_convertor import bntx_dds_injector as bntx
 from time import sleep
 
 import shutil
-import bars_extractor as barstool
-import bcfconverter as sound
+import bars_converter as barstool
+import bcf_converter as sound
 import argparse
 import bfstpfixer
 import oead
@@ -119,38 +119,6 @@ def convert_havok(actorpack: Path) -> None:
         write_sarc(actor, actor_path, actorpack)
     shutil.rmtree(actor_path)
 
-def convert_bars(bars: Path, mod_root: Path) -> None:
-    # Convert bars files, and their files inside
-    try:
-        o_bars = util.get_game_file(f"Voice/USen/{bars.name}").read_bytes()
-    except FileNotFoundError:
-        try:
-            o_bars = util.get_game_file(f"Sound/Resource/{bars.name}").read_bytes()
-        except FileNotFoundError:
-            bg_path = bars.parent.parent.parent.name
-            pack_path = util.get_game_file(f'Pack/{bg_path}')
-            pack = oead.Sarc(pack_path.read_bytes())
-            o_bars = pack.get_file(f'{bars}'.split(f'{pack_path.name}{sep}')[1].replace("\\", "/")).data
-                
-    barstool.extract_from_bars(bars, '>')
-    try:
-        bfstps = Path(bg_path).rglob('*.bfstp')
-        bfwavs = Path(bg_path).rglob('*.bfwav')
-    except:
-        bfstps = mod_root.rglob('*.bfstp')
-        bfwavs = mod_root.rglob('*.bfwav')
-    for bfstp in bfstps:
-        sound.convExtFile(bfstp, 'FSTP', '<')
-        bfstpfixer.fix(bfstp)
-    for bfwav in bfwavs:
-        sound.convExtFile(bfwav, 'FWAV', '<')
-    bars.write_bytes(o_bars)
-    shutil.move(f'{splitext(bars)[0]}_extracted', f'{bars.parent}{sep}new')
-    barstool.extract_from_bars(bars, '<')
-    repack_bars(bars, f'{splitext(bars)[0]}_extracted', f'{bars.parent}{sep}new')
-    shutil.rmtree(f'{splitext(bars)[0]}_extracted')
-    shutil.rmtree(f'{bars.parent}{sep}new')
-
 def convert_bflim(sblarc: Path):
     blarc = oead.Sarc(util.unyaz_if_needed(sblarc.read_bytes()))
     blarc_path = Path(sblarc.name)
@@ -187,11 +155,14 @@ def convert_files(files, mod_path: Path) -> None:
 
             elif file.suffix == ".bars":
                 # Convert bars files
-                convert_bars(file, mod_path)
+                print(file)
+                new_bars = barstool.convert_bars(file.read_bytes(), '<', '>')
+                file.write_bytes(bytes(new_bars))
 
             elif file.suffix == ".bfstm":
                 # Convert BFSTM files
-                sound.convExtFile(file, "FSTM", '<')
+                new_bfstm = sound.convFile(file.read_bytes(), "FSTM", '<')
+                file.write_bytes(bytes(new_bfstm))
 
             elif file.suffix == ".pack" or file.suffix == ".sbeventpack":
                 # Convert files inside of pack files
@@ -250,8 +221,8 @@ def convert(mod) -> None:
                         for error in warning:
                             if all(i not in error for i in supp_formats):
                                 file.write(error + "\n")
-                        continue
-                    if all(i not in warning for i in supp_formats):
+                        
+                    elif all(i not in warning for i in supp_formats):
                         file.write(warning + "\n")
 
     except Exception:
@@ -280,8 +251,8 @@ def main() -> None:
         convert(mod)
 
     if (Path('BfresPlatformConverter').exists() or Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()) and not downloaded:
-        reply = confirm_prompt("Would you like to keep the downloaded files?")
-        if not reply:
+        keep = confirm_prompt("Would you like to keep the downloaded files?")
+        if not keep:
             clean_up()
 
 
