@@ -155,9 +155,9 @@ def convert_files(files, mod_path: Path) -> None:
 
             elif file.suffix == ".bars":
                 # Convert bars files
-                print(file)
                 new_bars = barstool.convert_bars(file.read_bytes(), '<', '>')
                 file.write_bytes(bytes(new_bars))
+                print("Converted " + file.name + "!")
 
             elif file.suffix == ".bfstm":
                 # Convert BFSTM files
