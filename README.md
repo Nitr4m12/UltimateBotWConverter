@@ -38,6 +38,5 @@ BCML's converter is still limited, so using other tools to convert those files t
 - kreny - HKXConvert
 - NiceneNerd - BOTW Cross-Platform Mod Loader
 - HGStone - Bat script, and testing
-- Nitr4m12 - UltimateBoTWConverter
 
 It's worth considering that I'm still new to Python, so any feedback is appreciated!
