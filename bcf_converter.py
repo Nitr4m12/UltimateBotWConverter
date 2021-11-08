@@ -154,30 +154,6 @@ class REGNInfo(struct.Struct):
          self.loop_ed,
          self.secret) = self.unpack_from(data, pos)
 
-def convExtFile(fname, dest, dest_bom):
-    # Convert external file
-    with open(fname, "rb") as f:
-        inb = f.read()
-    magic = bytes_to_string(inb[:4])
-    if magic in supp_STM and dest in supp_STM:
-        outputBuffer = STMtoSTM(inb, magic, dest, dest_bom)
-
-    elif magic in supp_WAV and dest in supp_WAV:
-        outputBuffer = WAVtoWAV(inb, magic, dest, dest_bom)
-
-    elif magic in supp_STM and dest in supp_WAV:
-        outputBuffer = STMtoWAV(inb, magic, dest, dest_bom)
-
-    elif magic in supp_WAV and dest in supp_STM:
-        print("\nBFWAV/BCWAV to BFSTM/BCSTM/BFSTP is not implemented!")
-
-    else:
-        print("\nUnsupported file format!")
-
-    with open(fname, "wb+") as f:
-        f.write(outputBuffer)
-    print(f'{fname.name} converted')
-
 def convFile(f, dest, dest_bom):
     # Convert embedded files, usually inside a bars file
     magic = bytes_to_string(f[:4])
@@ -196,7 +172,7 @@ def convFile(f, dest, dest_bom):
     else:
         print("\nUnsupported file format!")
     
-    return bytes(outputBuffer)
+    return outputBuffer
 
 def bytes_to_string(data):
     end = data.find(b'\0')
@@ -540,6 +516,39 @@ def STMtoSTM(f, magic, dest, dest_bom):
 
                 else:
                     outputBuffer[pos:pos + data.size_ - 8] = data.data_
+
+                if bom != dest_bom and dest == "FSTP":
+                    # pdat header length is twice as big on switch than on WiiU
+                    pdat_header_len = 32 if dest_bom == ">" else 64
+
+                    # Extract the pdat length and subtract half of the original header, since the other half is already accounted for in the data
+                    pdat_len = int.from_bytes(outputBuffer[pos - 4:pos], "little" if dest_bom == "<" else "big") - int(pdat_header_len / 2) 
+                    outputBuffer[pos - 4:pos] = struct.pack(dest_bom + "I", pdat_len + pdat_header_len)
+                    outputBuffer[pos:pos + 4] = b'\x00\x00\x00\x01' if dest_bom == ">" else b'\x01\x00\x00\x00'
+
+                    # only data in PDAT length
+                    outputBuffer[pos + 8:pos + 12] = struct.pack(dest_bom + "I", pdat_len) 
+
+                    # just before the data in PDAT starts - usually stands 0x14 for WiiU (or Big Endian) and 0x54 for Switch (or Little Endian), currently assuming it's about BOM
+                    outputBuffer[pos + 20:pos + 24] = struct.pack(dest_bom + "I", 20 if dest_bom == ">" else 52) 
+                    
+                    # since switch PDAT header is twice as big (32 vs 64), it needs to have the second half filled with zeros
+                    if dest_bom == "<": 
+                        for _ in range(32):
+                            # inserting zeros that are not in the file, otherwise it would replace sound data
+                            outputBuffer.insert(pos + 24, 0)
+
+                    # trim all the unnecessary data
+                    del outputBuffer[pos - 8 + pdat_header_len + pdat_len:]
+
+                    # write the offset to the PDAT section and it's whole length
+                    outputBuffer[36:44] = struct.pack(dest_bom + "2I", pos - 8, pdat_len + pdat_header_len)
+
+                    # fill the rest of the FSTP section with 0
+                    outputBuffer[44:sized_refs[1].offset] = [0]*20
+                    
+                    # write the whole file size here
+                    outputBuffer[12:16] = struct.pack(dest_bom + "I", len(outputBuffer))                    
 
     return outputBuffer
 
