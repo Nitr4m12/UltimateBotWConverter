@@ -9,7 +9,6 @@ from urllib.request import urlopen, urlretrieve
 from io import BytesIO
 from zipfile import ZipFile
 from platform import system 
-from RepackBars import repack_bars
 from bflim_convertor import bntx_dds_injector as bntx
 from time import sleep
 
@@ -17,7 +16,6 @@ import shutil
 import bars_converter as barstool
 import bcf_converter as sound
 import argparse
-import bfstpfixer
 import oead
 import traceback
 
