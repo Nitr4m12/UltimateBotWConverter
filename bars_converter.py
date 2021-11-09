@@ -8,7 +8,6 @@ __license__ = "WTFPL"
 
 import struct
 import bcf_converter as sound
-import bfstpfixer as fixer
 
 class Header(struct.Struct):
 	# Bars Header
