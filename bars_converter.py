@@ -12,7 +12,7 @@ import bcf_converter as sound
 class Header(struct.Struct):
 	# Bars Header
 	def __init__(self, bom):
-		super().__init__(bom + "4sIH2sI")
+		super().__init__(bom + "4sI2HI")
 
 	def data(self, data, pos):
 		(self.magic,
@@ -21,10 +21,18 @@ class Header(struct.Struct):
 		 self.reserved,
 		 self.count) = self.unpack_from(data, pos)
 
+class TRKInfo(struct.Struct):
+	# Unknown bytes, but I'm guessing track info
+	def __init__(self, bom, count):
+		super().__init__(f'{bom}{count}I')
+
+	def data(self, data, pos):
+		self.unknown = self.unpack_from(data, pos)
+
 class AMTAHeader(struct.Struct):
 	# Amta Header
 	def __init__(self, bom):
-		super().__init__(bom + "4sH2s5I")
+		super().__init__(bom + "4s2H5I")
 
 	def data(self, data, pos):
 		(self.magic,
@@ -57,7 +65,7 @@ class FWAVHeader(struct.Struct):
 
 class TRKStruct(struct.Struct):
 	def __init__(self, bom, count):
-		super().__init__(f"{bom}{count*4}x{count*2}I")
+		super().__init__(f"{bom}{count*2}I")
 	
 	def data(self, data, pos):
 		(self.offsets) = self.unpack_from(data, pos)
@@ -98,6 +106,11 @@ def convert_bars(f, dest_bom, bom):
 
 	# Offset an amount of header.size
 	pos += header.size
+
+	trk_info = TRKInfo(bom, header.count)
+	trk_info.data(f, pos)
+	output_buffer[pos:pos + trk_info.size] = TRKInfo(dest_bom, header.count).pack(*trk_info.unknown)
+	pos += trk_info.size
 
 	# Create a structure for the track structure
 	track_struct = TRKStruct(bom, header.count)
@@ -174,5 +187,7 @@ def convert_bars(f, dest_bom, bom):
 		fwav_converted = sound.convFile(f[pos:pos + fwav.size_], sound.bytes_to_string(fwav.magic), dest_bom)
 
 		output_buffer[pos:pos + fwav.size_] = bytes(fwav_converted)
+
+	output_buffer[4:8] = struct.pack(dest_bom + "I", len(output_buffer))
 
 	return output_buffer
