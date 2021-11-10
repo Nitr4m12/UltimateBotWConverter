@@ -22,7 +22,7 @@ import traceback
 
 # Construct an argument parser
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
-parser.add_argument("mods", nargs='+')
+parser.add_argument("bnp", nargs='+')
 args = parser.parse_args()
 
 # Supported formats
@@ -36,6 +36,7 @@ def confirm_prompt(question: str) -> bool:
     return (reply in ("", "y"))
 
 def extract_sarc(sarc: oead.Sarc, sarc_path: Path) -> None:
+    # Extract the data from a SARC file
     Path(sarc_path).mkdir(exist_ok=True)
     for file in sarc.get_files():
         if not Path(sarc_path / file.name).parent.exists():
@@ -43,7 +44,7 @@ def extract_sarc(sarc: oead.Sarc, sarc_path: Path) -> None:
         Path(sarc_path / file.name).write_bytes(file.data)
 
 def write_sarc(sarc: oead.Sarc, sarc_path: Path, sarc_file: Path) -> None:
-    # Write the modified files back to the sarc
+    # Overwrite the SARC file with the modified files
     new_sarc = oead.SarcWriter(endian=oead.Endianness.Little)
     for file in sarc_path.rglob("*.*"):
         new_file = f'{file}'.split(f"{sarc_file.name}{sep}")[1].replace("\\", "/")
@@ -63,28 +64,31 @@ def convert_fres(sbfres: Path) -> None:
         zipfile = ZipFile(BytesIO(http_response.read()))
         zipfile.extractall(path='BfresPlatformConverter')
 
-    if sbfres.suffixes == ['.Tex1', '.sbfres']:
+    # If our FRES file is a texture, use the Tex2 file which should be in the same folder...
+    if '.Tex1' in sbfres.suffixes:
         bfres = util.unyaz_if_needed(sbfres.read_bytes())
-        tex2 = Path(f'{sbfres.parent}{sep}{sbfres.name.split(".")[0]}.Tex2.sbfres')
-        if Path(f'{sbfres.parent}{sep}{sbfres.name.split(".")[0]}.Tex2.sbfres').exists():
+        tex2 = Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex2")}')
+        if tex2.exists():
             tex2b = util.unyaz_if_needed(tex2.read_bytes())
             tex2.write_bytes(tex2b)
             sbfres.write_bytes(bfres)
-
-    elif sbfres.suffixes != ['.Tex2', '.sbfres']:
+    # ...else, work with our FRES file only
+    else:
         bfres = util.unyaz_if_needed(sbfres.read_bytes())
         sbfres.write_bytes(bfres)
 
+    # Convert the FRES file, formatting the path to the converter according to the OS
     if system() == "Windows":
         run(["BfresPlatformConverter\\BfresPlatformConverter.exe", sbfres])
     else:
         run(['mono', "BfresPlatformConverter/BfresPlatformConverter.exe", sbfres])
 
+    # Save our new file
     if sbfres.suffixes == ['.Tex1', '.sbfres']:
         if tex2.exists():
-            c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.stem.rstrip("1")}.sbfres').read_bytes())
+            c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name.replace("Tex1", "Tex")}').read_bytes())
             sbfres.write_bytes(c_bfres)
-            sbfres.rename(Path(f'{sbfres.parent}{sep}{sbfres.stem.rstrip("1")}.sbfres'))
+            sbfres.rename(Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex")}'))
             tex2.unlink()
     elif sbfres.suffixes != ['.Tex2', '.sbfres']:
         c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
@@ -93,7 +97,7 @@ def convert_fres(sbfres: Path) -> None:
 
 def convert_havok(actorpack: Path) -> None:
     # Convert havok files unsupported by BCML
-    if not Path('HKXConvert').exists() or Path('HKXConvert.exe').exists():
+    if not Path('HKXConvert').exists() or not Path('HKXConvert.exe').exists():
         # Download HKXConvert if it's not already in the system
         print("Downloading HKXConvert...")
         if system() == "Windows":
@@ -102,94 +106,119 @@ def convert_havok(actorpack: Path) -> None:
         else:
             filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
             hkx_c = f".{sep}HKXConvert"
+        # Make sure we can run the program by setting the correct permissions
         Path(f'{hkx_c}').chmod(0o755)
+
+    # Use the actorpack's name to create a new folder to write its contents in
     actor_path = Path(actorpack.name)
     actor = oead.Sarc(util.unyaz_if_needed(actorpack.read_bytes()))
     extract_sarc(actor, actor_path)
+
+    # Look in the actor pack's files for hkx files.
     hkxs = actor_path.rglob('*.hk*')
     for hkx in hkxs:
-        run([f'{hkx_c}', 'hkx2json', hkx])
+        # Convert every hkx found into json, and then to switch
+        run([hkx_c, 'hkx2json', hkx])
         hkx.unlink()
-        run([f'{hkx_c}', 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
+        run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
         Path(f'{splitext(hkx)[0]}.json').unlink()
     if hkxs:
-        print("HKX files converted. Saving...")
+        # Write the new actor file
+        print(f"HKX files converted. Saving {actorpack.name}")
         write_sarc(actor, actor_path, actorpack)
+
+    # Remove the temporary folder
     shutil.rmtree(actor_path)
 
-def convert_bflim(sblarc: Path):
+def convert_bflim(sblarc: Path) -> None:
+    # Convert bflim files inside a WiiU sblarc
     blarc = oead.Sarc(util.unyaz_if_needed(sblarc.read_bytes()))
     blarc_path = Path(sblarc.name)
+
     if any("bflim" in i.name for i in blarc.get_files()):
+        # Get the pack file where the sblarc comes from
         stock_pack = util.get_game_file(f"Pack/{sblarc.parent.parent.name}")
+
         try:
+            # If the sblarc is in Bootup.pack, get a stock Common.sblarc
             stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Common.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
+
         except (oead.InvalidDataError, AttributeError):
+            # If the sblarc is in Title.pack, get a stock Title.sblarc
             stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Title.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
-        bntx_file = stock_blarc.get_file(f"timg/__Combined.bntx")
+
+        # Get a stock bntx file
+        bntx_file = stock_blarc.get_file("timg/__Combined.bntx")
         extract_sarc(blarc, blarc_path)
-        Path(blarc_path / f'{bntx_file.name}').write_bytes(bntx_file.data)
+        Path(blarc_path / bntx_file.name).write_bytes(bntx_file.data)
+
         for bflim in blarc_path.rglob('*.bflim'):
-            bntx.tex_inject(blarc_path / f'{bntx_file.name}', bflim, False)
+            # Inject every bflim found into the bntx file
+            bntx.tex_inject(blarc_path / bntx_file.name, bflim, False)
             Path(bflim).unlink()
+        
+        # Write the new blarc file
         write_sarc(blarc, blarc_path, sblarc)
+
+        # Remove the temporary folder
         shutil.rmtree(blarc_path)
 
-def convert_files(files, mod_path: Path) -> None:
-    for file in files:
-        if file.exists() and file.stat().st_size != 0:
-            if file.suffix == ".sbfres" or file.suffix == ".sbitemico":
-                # Convert FRES files
+def convert_files(file: Path, mod_path: Path) -> None:
+    # Convert supported files
+    if file.exists() and file.stat().st_size != 0:
+        if file.suffix == ".sbfres" or file.suffix == ".sbitemico":
+            # Convert FRES files
+            if ".Tex2" not in file.suffixes:
                 convert_fres(file)
 
-            elif file.suffix == ".sbactorpack":
-                # Convert havok files inside actor packs
-                actor = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
-                actor_path = Path(f'{file.name}')
-                if any("hkcl" in i.name for i in actor.get_files()) or any("hkrg" in i.name for i in actor.get_files()):
-                    convert_havok(file)
-
-            elif file.suffix == ".bars":
-                # Convert bars files
-                new_bars = barstool.convert_bars(file.read_bytes(), '<', '>')
-                file.write_bytes(bytes(new_bars))
-                print("Converted " + file.name + "!")
-
-            elif file.suffix == ".bfstm":
-                # Convert BFSTM files
-                new_bfstm = sound.convFile(file.read_bytes(), "FSTM", '<')
-                file.write_bytes(bytes(new_bfstm))
-
-            elif file.suffix == ".pack" or file.suffix == ".sbeventpack":
-                # Convert files inside of pack files
-                pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
-                pack_path = Path(f'{file.name}')
-                if any(splitext(i.name)[1] in supp_formats for i in pack.get_files()):
-                    extract_sarc(pack, pack_path)
-                    convert_files(pack_path.rglob('*.*'), mod_path)
-                    write_sarc(pack, pack_path, file)
-                    shutil.rmtree(pack_path)
-
-            elif file.suffix == ".sblarc":
-                # Convert bflim files inside of sblarc files
-                convert_bflim(file)
-
-            elif file.suffix == ".hkcl":
+        elif file.suffix == ".sbactorpack":
+            # Convert havok files inside actor packs
+            actor = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
+            actor_path = Path(file.name)
+            if any("hkcl" in i.name for i in actor.get_files()) or any("hkrg" in i.name for i in actor.get_files()):
                 convert_havok(file)
 
-def clean_up():
+        elif file.suffix == ".bars":
+            # Convert bars files
+            new_bars = barstool.convert_bars(file.read_bytes(), '<', '>')
+            file.write_bytes(bytes(new_bars))
+            print("Converted " + file.name + "!")
+
+        elif file.suffix == ".bfstm":
+            # Convert BFSTM files
+            new_bfstm = sound.convFile(file.read_bytes(), "FSTM", '<')
+            file.write_bytes(bytes(new_bfstm))
+
+        elif file.suffix == ".pack": #or file.suffix == ".sbeventpack":
+            # Convert files inside of pack files
+            pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
+            pack_path = Path(file.name)
+            if any(splitext(i.name)[1] in supp_formats for i in pack.get_files()):
+                extract_sarc(pack, pack_path)
+                convert_files(pack_path.rglob('*.*'), mod_path)
+                write_sarc(pack, pack_path, file)
+                shutil.rmtree(pack_path)
+
+        elif file.suffix == ".sblarc":
+            # Convert bflim files inside of sblarc files
+            convert_bflim(file)
+
+        elif file.suffix == ".hkcl":
+            # If there's an hkcl file not in an actorpack, convert it as well
+            convert_havok(file)
+
+def clean_up() -> None:
     if Path('HKXConvert').exists():
         Path('HKXConvert').unlink()
     shutil.rmtree('BfresPlatformConverter', ignore_errors=True)
     shutil.rmtree('SwitchConverted', ignore_errors=True)
     shutil.rmtree('WiiUConverted', ignore_errors=True)
 
-def convert(mod) -> None:
+def convert(mod: Path) -> None:
     # Open the mod
-    bnp = Path(mod)
-    mod_path = open_mod(bnp)
+    mod_path = open_mod(mod)
     files = mod_path.rglob('*.*')
     try: 
 
@@ -197,9 +226,11 @@ def convert(mod) -> None:
         warnings = convert_mod(mod_path, False, True)
 
         # Convert supported files
-        convert_files(files, mod_path)
-            
-        out = bnp.with_name(f"{bnp.stem}_switch.bnp")
+        for file in files:
+            convert_files(file, mod_path)
+        
+        # Pack the converted mod into a new bnp
+        out = mod.with_name(f"{mod.stem}_switch.bnp")
         if Path(out).exists():
             Path(out).unlink()
         x_args = [
@@ -211,11 +242,11 @@ def convert(mod) -> None:
         run(x_args)
 
         # Write BCML's warning to a file
-        if warnings:
+        if all(i not in warning for warning in warnings for i in supp_formats):
             with open("error.log", "a") as file:
                 for warning in warnings:
                     # Write BCML's warning to a file
-                    if type(warning) == list:
+                    if isinstance(warning, list):
                         for error in warning:
                             if all(i not in error for i in supp_formats):
                                 file.write(error + "\n")
@@ -228,13 +259,14 @@ def convert(mod) -> None:
         clean_up()
 
     finally:
+        # Remove the temporary mod_path
         shutil.rmtree(mod_path, ignore_errors=True)
 
 def main() -> None:
-    if len(args.mods) == 1: # one argument
-        mods = glob(args.mods[0])
+    if len(args.bnp) == 1: # one argument
+        mods = glob(args.bnp[0])
     else: # more than one argument
-    	mods = args.mods
+    	mods = args.bnp
 
     downloaded = False
     if Path('BfresPlatformConverter').exists() and (Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()):
@@ -246,7 +278,7 @@ def main() -> None:
     util.save_settings()
     
     for mod in mods:
-        convert(mod)
+        convert(Path(mod))
 
     if (Path('BfresPlatformConverter').exists() or Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()) and not downloaded:
         keep = confirm_prompt("Would you like to keep the downloaded files?")
