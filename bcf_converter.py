@@ -487,7 +487,7 @@ def STMtoSTM(f, magic, dest, dest_bom):
                     pdat_header_len = 32 if dest_bom == ">" else 64
                     pdat_offset = pos - 8
                     # Extract the pdat length and subtract half of the original header, since the other half is already accounted for in the data
-                    pdat_len = int.from_bytes(outputBuffer[pdat_offset + 4:pdat_offset + 8], "little" if dest_bom == "<" else "big") - int(pdat_header_len / 2) 
+                    pdat_len = int.from_bytes(outputBuffer[pdat_offset + 4:pdat_offset + 8], "little" if dest_bom == "<" else "big") - pdat_header_len // 2
                     outputBuffer[pdat_offset + 4:pdat_offset + 8] = struct.pack(dest_bom + "I", pdat_len + pdat_header_len)
                     outputBuffer[pdat_offset + 8:pdat_offset + 12] = b'\x00\x00\x00\x01' if dest_bom == ">" else b'\x01\x00\x00\x00'
 
