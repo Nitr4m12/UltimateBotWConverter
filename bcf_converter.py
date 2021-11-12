@@ -53,36 +53,16 @@ class BLKHeader(struct.Struct):
 
 class STMInfo(struct.Struct):  # Stream Info
     def __init__(self, bom):
-        super().__init__(bom + '3B1x11I')
-
-    def data(self, data, pos):
-        (self.codec,
-         self.loop_flag,
-         self.count,
-         self.sample,
-         self.loop_start,
-         self.loop_end,
-         self.sampleBlk_count,
-         self.sampleBlk_size,
-         self.sampleBlk_sampleCount,
-         self.lSampleBlk_size,
-         self.lSampleBlk_sampleCount,
-         self.lSampleBlk_padSize,
-         self.seek_size,
-         self.SISC) = self.unpack_from(data, pos)
-
-class STMInfoR(struct.Struct):  # Stream Info
-    def __init__(self, bom):
         super().__init__(bom + '4B11I')
 
     def data(self, data, pos):
         (self.codec,
          self.loop_flag,
-         self.count,
-         self.rcount,
+         self.ch_count,
+         self.reg_count,
          self.sample,
          self.loop_start,
-         self.loop_end,
+         self.sample_count,
          self.sampleBlk_count,
          self.sampleBlk_size,
          self.sampleBlk_sampleCount,
@@ -307,41 +287,27 @@ def STMtoSTM(f, magic, dest, dest_bom):
         sys.exit(1)
 
     pos = stmInfo_ref.offset + stmInfo_ref.pos
-    if header.numBlocks == 3:
-        stmInfo = STMInfo(bom)
-        stmInfo.data(f, pos)
+    stmInfo = STMInfo(bom)
+    stmInfo.data(f, pos)
 
-        outputBuffer[pos:pos + stmInfo.size] = bytes(
-            STMInfo(dest_bom).pack(stmInfo.codec, stmInfo.loop_flag, stmInfo.count, stmInfo.sample, stmInfo.loop_start,
-                                stmInfo.loop_end, stmInfo.sampleBlk_count, stmInfo.sampleBlk_size,
-                                stmInfo.sampleBlk_sampleCount, stmInfo.lSampleBlk_size, stmInfo.lSampleBlk_sampleCount,
-                                stmInfo.lSampleBlk_padSize, stmInfo.seek_size, stmInfo.SISC))
-        pos += stmInfo.size
-    else:
-        stmInfo = STMInfoR(bom)
-        stmInfo.data(f, pos)
-
-        outputBuffer[pos:pos + stmInfo.size] = bytes(
-            STMInfoR(dest_bom).pack(stmInfo.codec, stmInfo.loop_flag, stmInfo.count, stmInfo.rcount, stmInfo.sample, stmInfo.loop_start,
-                                stmInfo.loop_end, stmInfo.sampleBlk_count, stmInfo.sampleBlk_size,
-                                stmInfo.sampleBlk_sampleCount, stmInfo.lSampleBlk_size, stmInfo.lSampleBlk_sampleCount,
-                                stmInfo.lSampleBlk_padSize, stmInfo.seek_size, stmInfo.SISC))
-        pos += stmInfo.size
-
+    outputBuffer[pos:pos + stmInfo.size] = bytes(
+        STMInfo(dest_bom).pack(stmInfo.codec, stmInfo.loop_flag, stmInfo.ch_count, stmInfo.reg_count, stmInfo.sample, stmInfo.loop_start,
+                            stmInfo.sample_count, stmInfo.sampleBlk_count, stmInfo.sampleBlk_size,
+                            stmInfo.sampleBlk_sampleCount, stmInfo.lSampleBlk_size, stmInfo.lSampleBlk_sampleCount,
+                            stmInfo.lSampleBlk_padSize, stmInfo.seek_size, stmInfo.SISC))
+    pos += stmInfo.size
 
     sampleData_ref = Ref(bom)
     sampleData_ref.data(f, pos)
 
     outputBuffer[pos:pos + sampleData_ref.size] = bytes(Ref(dest_bom).pack(sampleData_ref.type_, sampleData_ref.offset))
-    pos += 8
+    pos += sampleData_ref.size
 
-    if hasattr(stmInfo, 'rcount'):
-        stmInfo.rcount
-        regInfo = REGNInfo(bom)
-        regInfo.data(f, pos)
+    regInfo = REGNInfo(bom)
+    regInfo.data(f, pos)
 
-        outputBuffer[pos:pos + regInfo.size] = bytes(REGNInfo(dest_bom).pack(regInfo.reg_size, regInfo.reg_flag, regInfo.reg_offset, regInfo.loop_st, regInfo.loop_ed, regInfo.secret))
-        pos += regInfo.size
+    outputBuffer[pos:pos + regInfo.size] = bytes(REGNInfo(dest_bom).pack(regInfo.reg_size, regInfo.reg_flag, regInfo.reg_offset, regInfo.loop_st, regInfo.loop_ed, regInfo.secret))
+    pos += regInfo.size
 
     trkInfoTable = {}
     trkInfo = {}
@@ -421,7 +387,7 @@ def STMtoSTM(f, magic, dest, dest_bom):
 
                     outputBuffer[pos:pos + context.size] = bytes(
                         DSPContext(dest_bom).pack(context.predictor_scale, context.preSample, context.preSample2))
-
+                        
                     pos += context.size
                     loopContext = DSPContext(bom)
                     loopContext.data(f, pos)
@@ -516,37 +482,36 @@ def STMtoSTM(f, magic, dest, dest_bom):
 
                 else:
                     outputBuffer[pos:pos + data.size_ - 8] = data.data_
-
                 if bom != dest_bom and dest == "FSTP":
                     # pdat header length is twice as big on switch than on WiiU
                     pdat_header_len = 32 if dest_bom == ">" else 64
-
+                    pdat_offset = pos - 8
                     # Extract the pdat length and subtract half of the original header, since the other half is already accounted for in the data
-                    pdat_len = int.from_bytes(outputBuffer[pos - 4:pos], "little" if dest_bom == "<" else "big") - int(pdat_header_len / 2) 
-                    outputBuffer[pos - 4:pos] = struct.pack(dest_bom + "I", pdat_len + pdat_header_len)
-                    outputBuffer[pos:pos + 4] = b'\x00\x00\x00\x01' if dest_bom == ">" else b'\x01\x00\x00\x00'
+                    pdat_len = int.from_bytes(outputBuffer[pdat_offset + 4:pdat_offset + 8], "little" if dest_bom == "<" else "big") - int(pdat_header_len / 2) 
+                    outputBuffer[pdat_offset + 4:pdat_offset + 8] = struct.pack(dest_bom + "I", pdat_len + pdat_header_len)
+                    outputBuffer[pdat_offset + 8:pdat_offset + 12] = b'\x00\x00\x00\x01' if dest_bom == ">" else b'\x01\x00\x00\x00'
 
                     # only data in PDAT length
-                    outputBuffer[pos + 8:pos + 12] = struct.pack(dest_bom + "I", pdat_len) 
+                    outputBuffer[pdat_offset + 16:pdat_offset + 20] = struct.pack(dest_bom + "I", pdat_len) 
 
                     # just before the data in PDAT starts - usually stands 0x14 for WiiU (or Big Endian) and 0x54 for Switch (or Little Endian), currently assuming it's about BOM
-                    outputBuffer[pos + 20:pos + 24] = struct.pack(dest_bom + "I", 20 if dest_bom == ">" else 52) 
-                    
+                    outputBuffer[pdat_offset + 28:pdat_offset + 32] = struct.pack(dest_bom + "I", 20 if dest_bom == ">" else 52)
+
                     # since switch PDAT header is twice as big (32 vs 64), it needs to have the second half filled with zeros
                     if dest_bom == "<": 
                         for _ in range(32):
                             # inserting zeros that are not in the file, otherwise it would replace sound data
-                            outputBuffer.insert(pos + 24, 0)
+                            outputBuffer.insert(pdat_offset + 32, 0)
 
                     # trim all the unnecessary data
-                    del outputBuffer[pos - 8 + pdat_header_len + pdat_len:]
+                    del outputBuffer[pdat_offset + pdat_header_len + pdat_len:]
 
                     # write the offset to the PDAT section and it's whole length
-                    outputBuffer[36:44] = struct.pack(dest_bom + "2I", pos - 8, pdat_len + pdat_header_len)
+                    outputBuffer[36:44] = struct.pack(dest_bom + "2I", pdat_offset, pdat_len + pdat_header_len)
 
                     # fill the rest of the FSTP section with 0
                     outputBuffer[44:sized_refs[1].offset] = [0]*20
-                    
+
                     # write the whole file size here
                     outputBuffer[12:16] = struct.pack(dest_bom + "I", len(outputBuffer))                    
 
