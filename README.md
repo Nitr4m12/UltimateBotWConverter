@@ -1,5 +1,7 @@
 # UltimateBoTWConverter
-A script that converts WiiU BotW mods to Switch. It uses every resource I could find that allows for conversion, with some modifications to accomodate for the central script. Thanks to HGStone for testing and creating the bat script. ONLY `converter.py` IS COMPLETELY MADE BY ME (and even that uses some code from NiceneNerd), THE ORIGINAL AUTHORS STILL DESERVE ALL THE CREDIT FOR THEIR WORK.
+A script that converts WiiU BotW mods to Switch. It uses every resource I could find that allows for conversion, with some modifications to accomodate for the central script. 
+
+DISCLAIMER: While I made modifications of my own to various of the tools included here, the original authors still deserve all the credit for all their work.
 
 # Requirements
 - Python 3.7 or 3.8 (If on Windows, you must check `Add Python to PATH` during installation)
@@ -21,13 +23,19 @@ Drag and drop your BNP into the included bat file
 
 # Added supported formats
 BCML's converter is still limited, so using other tools to convert those files that it can't is our only option for now. With this script, I've automated the process of using those other tools and added these formats to the supported list:
-- `.bars`
-- `.bfstm`
-- `.sbfres` (animations are untested)
+- `.bars`*
+- `.bfstm`*
+- `.sbfres`**
 - `.sbitemico`
 - `.hkcl`
 - `.hkrg`
-- `.bflim` (these are inside sblarc files)
+- `.bflim`***
+
+## Limitations
+- \*Currently, `.bars` files with `.bfstp` files inside have some problems converting. If there's no `.bfstm` file to accompany the `.bfstp` somewhere on the mod, audio issues can occur. This can happen if there's no `.bfstp` to go along a `.bfstm` as well. If your bars file includes `.bfstp`s, make sure to include the corresponding `.bfstm` to it, and viceversa.
+- \*\*If trying to convert a `.sbres` file that replaces animations, it might or might not work due to limitations with BfresPlatformConverter.
+- \*\*\*For bflim files, only files that replace the original ones can be converted, not completely new ones.
+
 
 # Credits 
 - AboodXD - BCFSTM-BCFWAV Converter, BNTX Injector, Bflim Extractor
@@ -37,6 +45,6 @@ BCML's converter is still limited, so using other tools to convert those files t
 - KillzXGaming - BfresPlatformConverter
 - kreny - HKXConvert
 - NiceneNerd - BOTW Cross-Platform Mod Loader
-- HGStone - Bat script, and testing
+- HGStone - Bat script and testing
 
 It's worth considering that I'm still new to Python, so any feedback is appreciated!
