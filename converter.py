@@ -238,8 +238,8 @@ def convert(mod: Path) -> None:
         x_args = [
             util.get_7z_path(),
             "a",
-            out,
-            f'{mod_path / "*"}',
+            str(out),
+            f'{str(mod_path / "*")}',
         ]
         run(x_args)
 
