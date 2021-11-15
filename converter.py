@@ -227,7 +227,7 @@ def convert(mod: Path) -> None:
 
         # Convert supported files
         for file in files:
-            convert_files(file, mod_path)
+            convert_files(Path(file), mod_path)
         
         # Pack the converted mod into a new bnp
         out = mod.with_name(f"{mod.stem}_switch.bnp")
