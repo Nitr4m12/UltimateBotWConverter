@@ -79,9 +79,9 @@ def convert_fres(sbfres: Path) -> None:
 
     # Convert the FRES file, formatting the path to the converter according to the OS
     if system() == "Windows":
-        run(["BfresPlatformConverter\\BfresPlatformConverter.exe", sbfres])
+        run(["BfresPlatformConverter\\BfresPlatformConverter.exe", str(sbfres)])
     else:
-        run(['mono', "BfresPlatformConverter/BfresPlatformConverter.exe", sbfres])
+        run(['mono', "BfresPlatformConverter/BfresPlatformConverter.exe", str(sbfres)])
 
     # Save our new file
     if sbfres.suffixes == ['.Tex1', '.sbfres']:
