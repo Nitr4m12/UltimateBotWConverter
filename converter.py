@@ -197,7 +197,9 @@ def convert_files(file: Path, mod_path: Path) -> None:
             pack_path = Path(file.name)
             if any(splitext(i.name)[1] in supp_formats for i in pack.get_files()):
                 extract_sarc(pack, pack_path)
-                convert_files(pack_path.rglob('*.*'), mod_path)
+                new_files = pack_path.rglob('*.*')
+                for new in new_files:
+                    convert_files(new, mod_path)
                 write_sarc(pack, pack_path, file)
                 shutil.rmtree(pack_path)
 
