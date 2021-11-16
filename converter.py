@@ -11,6 +11,7 @@ from zipfile import ZipFile
 from platform import system 
 from bflim_convertor import bntx_dds_injector as bntx
 from time import sleep
+from json import loads
 
 import shutil
 import bars_converter as barstool
@@ -221,9 +222,12 @@ def clean_up() -> None:
 def convert(mod: Path) -> None:
     # Open the mod
     mod_path = open_mod(mod)
+    if (mod_path / "info.json").exists():
+        meta = loads((mod_path / "info.json").read_text("utf-8"))
+    if meta["platform"] == "switch":
+        raise Exception("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
     files = mod_path.rglob('*.*')
-    try: 
-
+    try:
         # Run the mod through BCML's automatic converter first 
         warnings = convert_mod(mod_path, False, True)
 
