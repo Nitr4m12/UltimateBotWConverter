@@ -1,0 +1,6 @@
+[submodule "bars-py"]
+	path = bars-py
+	url = https://github.com/Nitr4m12/bars-py
+[submodule "bars_py"]
+	path = bars_py
+	url = https://github.com/Nitr4m12/bars_py
