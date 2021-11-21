@@ -1,4 +1,4 @@
-# UltimateBoTWConverter
+# UltimateBotWConverter
 A script that converts WiiU BotW mods to Switch. It uses every resource I could find that allows for conversion, with some modifications to accomodate for the central script. 
 
 DISCLAIMER: While I made modifications of my own to various of the tools included here, the original authors still deserve all the credit for all their work.
