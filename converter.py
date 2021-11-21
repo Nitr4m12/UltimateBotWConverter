@@ -1,7 +1,3 @@
-from pathlib import Path
-from bcml.install import open_mod
-from bcml.dev import convert_mod
-from bcml import util
 from subprocess import run
 from os.path import sep, splitext
 from glob import glob
@@ -9,23 +5,27 @@ from urllib.request import urlopen, urlretrieve
 from io import BytesIO
 from zipfile import ZipFile
 from platform import system 
-from bflim_convertor import bntx_dds_injector as bntx
-from time import sleep
 from json import loads
-
+from pathlib import Path
+from itertools import islice
+import faulthandler
 import shutil
-import bars_converter as barstool
-import bcf_converter as sound
 import argparse
-import oead
 import traceback
 
+import oead
+from bcml.install import open_mod
+from bcml.dev import convert_mod
+from bcml import util
+from bars_py import bars, bcf_converter
+from bflim_convertor import bntx_dds_injector as bntx
+
+faulthandler.enable()
 
 # Construct an argument parser
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
 parser.add_argument("bnp", nargs='+')
 args = parser.parse_args()
-
 # Supported formats
 supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".bars", ".bfstm", ".bflim", ".sblarc"]
 
@@ -34,7 +34,7 @@ def confirm_prompt(question: str) -> bool:
     reply = None
     while reply not in ("", "y", "n"):
         reply = input(f"{question} (Y/n): ").lower()
-    return (reply in ("", "y"))
+    return reply in ("", "y")
 
 def extract_sarc(sarc: oead.Sarc, sarc_path: Path) -> None:
     # Extract the data from a SARC file
@@ -131,6 +131,18 @@ def convert_havok(actorpack: Path) -> None:
     # Remove the temporary folder
     shutil.rmtree(actor_path)
 
+def get_stock_bfstp(bfstp_name: str, bars_file: Path):
+    # Look for the bars file containing the bfstp
+    try:
+        stock_bars = util.get_game_file(bars_file.name).split("/")[-1]
+    except FileNotFoundError:
+        # If there's no loose bars file, find one inside packs
+        stock_pack = util.get_game_file(f'Pack/{bars_file.parent.parent.parent.name}')
+        stock_bars = oead.Sarc(stock_pack.read_bytes()).get_file(f"Sound/Resource/{bars_file.name}")
+    # Get the stock tracks
+    stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
+    return stock_tracks[bfstp_name]
+
 def convert_bflim(sblarc: Path) -> None:
     # Convert bflim files inside a WiiU sblarc
     blarc = oead.Sarc(util.unyaz_if_needed(sblarc.read_bytes()))
@@ -159,7 +171,6 @@ def convert_bflim(sblarc: Path) -> None:
             # Inject every bflim found into the bntx file
             bntx.tex_inject(blarc_path / bntx_file.name, bflim, False)
             Path(bflim).unlink()
-        
         # Write the new blarc file
         write_sarc(blarc, blarc_path, sblarc)
 
@@ -169,7 +180,7 @@ def convert_bflim(sblarc: Path) -> None:
 def convert_files(file: Path, mod_path: Path) -> None:
     # Convert supported files
     if file.exists() and file.stat().st_size != 0:
-        if file.suffix == ".sbfres" or file.suffix == ".sbitemico":
+        if file.suffix in (".sbfres", ".sbitemico"):
             # Convert FRES files
             if ".Tex2" not in file.suffixes:
                 convert_fres(file)
@@ -177,20 +188,43 @@ def convert_files(file: Path, mod_path: Path) -> None:
         elif file.suffix == ".sbactorpack":
             # Convert havok files inside actor packs
             actor = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
-            actor_path = Path(file.name)
+            # actor_path = Path(file.name)
             if any("hkcl" in i.name for i in actor.get_files()) or any("hkrg" in i.name for i in actor.get_files()):
                 convert_havok(file)
 
         elif file.suffix == ".bars":
             # Convert bars files
-            new_bars = barstool.convert_bars(file.read_bytes(), '<', '>')
+            bars_bytes = file.read_bytes()
+            bars_file = bytearray(bars_bytes)
+            tracks, offsets = bars.get_bars_tracks(bars_file)
+            for name, data in tracks.items():
+                # Read the track header and convert appropiately
+                magic: str = data[:0x4].decode("utf-8")
+                try:
+                    bfstm_exists = next(mod_path.rglob(name + ".bfstm"))
+                except StopIteration:
+                    bfstm_exists = None
+                    
+                if magic == 'FWAV':
+                    tracks[name] = bcf_converter.conv_file(data, magic, '<')
+
+                elif magic == 'FSTP' and bfstm_exists:
+                    tracks[name] = bcf_converter.conv_file(data, magic, '<')
+
+                elif magic == 'FSTP' and not bfstm_exists:
+                    tracks[name] = get_stock_bfstp(name, file)
+
+                bars_file[offsets[name]:offsets[name] + len(tracks[name])] = tracks[name]
+
+            new_bars = bars.convert_bars(bars_file, '<')
             file.write_bytes(bytes(new_bars))
-            print("Converted " + file.name + "!")
+            print("Converted " + file.name + " successfully!")
 
         elif file.suffix == ".bfstm":
             # Convert BFSTM files
-            new_bfstm = sound.convFile(file.read_bytes(), "FSTM", '<')
+            new_bfstm = bcf_converter.conv_file(file.read_bytes(), "FSTM", '<')
             file.write_bytes(bytes(new_bfstm))
+            print("Converted " + file.name + " successfully!")
 
         elif file.suffix == ".pack": #or file.suffix == ".sbeventpack":
             # Convert files inside of pack files
@@ -225,7 +259,7 @@ def convert(mod: Path) -> None:
     if (mod_path / "info.json").exists():
         meta = loads((mod_path / "info.json").read_text("utf-8"))
     if meta["platform"] == "switch":
-        raise Exception("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
+        raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
     files = mod_path.rglob('*.*')
     try:
         # Run the mod through BCML's automatic converter first 
@@ -233,7 +267,7 @@ def convert(mod: Path) -> None:
 
         # Convert supported files
         for file in files:
-            convert_files(Path(file), mod_path)
+            convert_files(file, mod_path)
         
         # Pack the converted mod into a new bnp
         out = mod.with_name(f"{mod.stem}_switch.bnp")
@@ -249,7 +283,7 @@ def convert(mod: Path) -> None:
 
         # Write BCML's warning to a file
         if all(i not in warning for warning in warnings for i in supp_formats):
-            with open("error.log", "a") as file:
+            with open("error.log", "a", encoding="utf-8") as file:
                 for warning in warnings:
                     # Write BCML's warning to a file
                     if isinstance(warning, list):

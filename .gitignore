@@ -1,2 +1,12 @@
 # Ignore python cache files
 *.pyc
+
+# Ignore launch.json
+launch.json
+
+# Nintendo files to ignore
+*.bfres
+*.sbfres
+*.bitemico
+*.sbitemico
+*.bars
