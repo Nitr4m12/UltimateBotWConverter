@@ -8,7 +8,6 @@ from platform import system
 from json import loads
 from pathlib import Path
 from itertools import islice
-import faulthandler
 import shutil
 import argparse
 import traceback
@@ -19,8 +18,6 @@ from bcml.dev import convert_mod
 from bcml import util
 from bars_py import bars, bcf_converter
 from bflim_convertor import bntx_dds_injector as bntx
-
-faulthandler.enable()
 
 # Construct an argument parser
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
@@ -204,7 +201,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
                     bfstm_exists = next(mod_path.rglob(name + ".bfstm"))
                 except StopIteration:
                     bfstm_exists = None
-                    
+
                 if magic == 'FWAV':
                     tracks[name] = bcf_converter.conv_file(data, magic, '<')
 
