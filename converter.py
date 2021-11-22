@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from subprocess import run
 from os.path import sep, splitext
 from glob import glob
@@ -122,7 +124,7 @@ def convert_havok(actorpack: Path) -> None:
         Path(f'{splitext(hkx)[0]}.json').unlink()
     if hkxs:
         # Write the new actor file
-        print(f"HKX files converted. Saving {actorpack.name}")
+        print(f"HKX files from {actorpack.name} converted. Saving...")
         write_sarc(actor, actor_path, actorpack)
 
     # Remove the temporary folder
@@ -215,13 +217,13 @@ def convert_files(file: Path, mod_path: Path) -> None:
 
             new_bars = bars.convert_bars(bars_file, '<')
             file.write_bytes(bytes(new_bars))
-            print("Converted " + file.name + " successfully!")
+            print("Successfully converted " + file.name + "!")
 
         elif file.suffix == ".bfstm":
             # Convert BFSTM files
             new_bfstm = bcf_converter.conv_file(file.read_bytes(), "FSTM", '<')
             file.write_bytes(bytes(new_bfstm))
-            print("Converted " + file.name + " successfully!")
+            print("Successfully converted " + file.name + "!")
 
         elif file.suffix == ".pack": #or file.suffix == ".sbeventpack":
             # Convert files inside of pack files
