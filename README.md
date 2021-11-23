@@ -6,7 +6,7 @@ DISCLAIMER: While I made modifications of my own to various of the tools include
 # Requirements
 - Python 3.7 or 3.8 (If on Windows, you must check `Add Python to PATH` during installation)
 - A legal, unpacked dump of BoTW Switch (1.6.0)
-- [BCML](https://github.com/NiceneNerd/BCML)
+- [BotW Cross-Platform Mod Loader](https://github.com/NiceneNerd/BCML)
 
 For obtaining a BoTW dump, see https://zeldamods.org/wiki/Help:Dumping_games. BCML can be obtained through python's own pip, using `pip install bcml`
 
