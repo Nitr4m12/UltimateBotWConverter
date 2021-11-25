@@ -10,6 +10,7 @@ from platform import system
 from json import loads
 from pathlib import Path
 from itertools import islice
+import sys
 import shutil
 import argparse
 import traceback
@@ -258,7 +259,8 @@ def convert(mod: Path) -> None:
     if (mod_path / "info.json").exists():
         meta = loads((mod_path / "info.json").read_text("utf-8"))
     if meta["platform"] == "switch":
-        raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
+        sys.exit(2)
+        #raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
     files = mod_path.rglob('*.*')
     try:
         # Run the mod through BCML's automatic converter first 
