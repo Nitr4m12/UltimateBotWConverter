@@ -10,7 +10,6 @@ from platform import system
 from json import loads
 from pathlib import Path
 from itertools import islice
-import sys
 import shutil
 import argparse
 import traceback
@@ -97,16 +96,17 @@ def convert_fres(sbfres: Path) -> None:
 
 
 def convert_havok(actorpack: Path) -> None:
+    hkx_c = f".{sep}HKXConvert.exe" if system() == "Windows" else f".{sep}HKXConvert"
     # Convert havok files unsupported by BCML
-    if not Path('HKXConvert').exists() or not Path('HKXConvert.exe').exists():
+    if system() == "Windows" and not Path('HKXConvert.exe').exists():
         # Download HKXConvert if it's not already in the system
         print("Downloading HKXConvert...")
-        if system() == "Windows":
-            filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert.exe', filename='HKXConvert.exe')
-            hkx_c = f".{sep}HKXConvert.exe"
-        else:
-            filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
-            hkx_c = f".{sep}HKXConvert"
+        filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert.exe', filename='HKXConvert.exe')
+        Path(f'{hkx_c}').chmod(0o755)
+    elif not Path('HKXConvert').exists() and (system() == "Linux" or system() == "macOS"):
+        print("Downloading HKXConvert...")
+        # Download HKXConvert if it's not already in the system
+        filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
         # Make sure we can run the program by setting the correct permissions
         Path(f'{hkx_c}').chmod(0o755)
 
@@ -119,6 +119,7 @@ def convert_havok(actorpack: Path) -> None:
     hkxs = actor_path.rglob('*.hk*')
     for hkx in hkxs:
         # Convert every hkx found into json, and then to switch
+        print(f"Converting {hkx}")
         run([hkx_c, 'hkx2json', hkx])
         hkx.unlink()
         run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
@@ -259,8 +260,7 @@ def convert(mod: Path) -> None:
     if (mod_path / "info.json").exists():
         meta = loads((mod_path / "info.json").read_text("utf-8"))
     if meta["platform"] == "switch":
-        sys.exit(2)
-        #raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
+        raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
     files = mod_path.rglob('*.*')
     try:
         # Run the mod through BCML's automatic converter first 
