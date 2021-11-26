@@ -102,13 +102,12 @@ def convert_havok(actorpack: Path) -> None:
         # Download HKXConvert if it's not already in the system
         print("Downloading HKXConvert...")
         filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert.exe', filename='HKXConvert.exe')
-        Path(f'{hkx_c}').chmod(0o755)
     elif not Path('HKXConvert').exists() and (system() == "Linux" or system() == "macOS"):
         print("Downloading HKXConvert...")
         # Download HKXConvert if it's not already in the system
         filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
-        # Make sure we can run the program by setting the correct permissions
-        Path(f'{hkx_c}').chmod(0o755)
+    # Make sure we can run the program by setting the correct permissions
+    Path(f'{hkx_c}').chmod(0o755)
 
     # Use the actorpack's name to create a new folder to write its contents in
     actor_path = Path(actorpack.name)
@@ -297,7 +296,7 @@ def convert(mod: Path) -> None:
 
     except Exception:
         print(traceback.format_exc())
-        clean_up()
+        # clean_up()
 
     finally:
         # Remove the temporary mod_path
