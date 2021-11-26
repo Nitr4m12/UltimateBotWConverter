@@ -23,18 +23,17 @@ Drag and drop your BNP into the included bat file
 
 # Supported formats
 BCML's converter is still limited, so using other tools to convert those files that it can't is our only option for now. With this script, I've automated the process of using those other tools and added these formats to the supported list:
-- `.bars`*
-- `.bfstm`*
-- `.sbfres`**
+- `.bars`
+- `.bfstm`
+- `.sbfres`*
 - `.sbitemico`
 - `.hkcl`
 - `.hkrg`
-- `.bflim`***
+- `.bflim`**
 
 ### Limitations:
-- \*Currently, `.bars` files with `.bfstp` files inside have some problems converting. If there's no `.bfstm` file to accompany the `.bfstp` somewhere on the mod, audio issues can occur. This can happen if there's no `.bfstp` to go along a `.bfstm` as well. If your bars file includes `.bfstp`s, make sure to include the corresponding `.bfstm` to it, and viceversa.
-- \*\*If trying to convert a `.sbres` file that replaces animations, it might or might not work due to limitations with BfresPlatformConverter.
-- \*\*\*For bflim files, only files that replace the original ones can be converted, not completely new ones.
+- \*If trying to convert a `.sbres` file that replaces animations, it might or might not work due to limitations with BfresPlatformConverter.
+- \*\*For bflim files, only files that replace the original ones can be converted, not completely new ones.
 
 
 # Credits 
