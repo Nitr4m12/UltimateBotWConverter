@@ -19,7 +19,7 @@ chmod +x convert.sh
 ./convert.sh "mod"
 ```
 ### Windows:
-Open a CMD window in the script's folder, and run the script with `python converter.py "mod"`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder. You can also drag and drop your BNP into the included bat file.
+Open a CMD window in the script's folder, and run the script with `python converter.py "mod"`, replacing `mod` by your BNP mod/mods, or `path\to\folder\with\bnps\*.bnp` to convert every BNP in a folder. You can also drag and drop your BNP(s) into the included bat file.
 
 # Supported formats
 BCML's converter is still limited, so using other tools to convert those files that it can't is our only option for now. With this script, I've automated the process of using those other tools and added these formats to the supported list:
