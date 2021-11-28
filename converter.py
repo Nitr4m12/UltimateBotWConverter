@@ -13,6 +13,7 @@ from itertools import islice
 import shutil
 import argparse
 import traceback
+# import logging
 
 import oead
 from bcml.install import open_mod
@@ -25,6 +26,11 @@ from bflim_convertor import bntx_dds_injector as bntx
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
 parser.add_argument("bnp", nargs='+')
 args = parser.parse_args()
+
+# # Error logging
+# logging.basicConfig(filename="error.log", filemode="w", level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+# logger = logging.getLogger(__name__)
+
 # Supported formats
 supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".bars", ".bfstm", ".bflim", ".sblarc"]
 
@@ -155,13 +161,14 @@ def convert_havok(actorpack: Path) -> None:
 def get_stock_bfstp(bfstp_name: str, bars_file: Path):
     # Look for the bars file containing the bfstp
     try:
-        stock_bars = util.get_game_file(bars_file.name).split("/")[-1]
+        stock_bars = util.get_game_file(f"Sound/Resource/{bars_file.name}")
+        stock_tracks,_ = bars.get_bars_tracks(stock_bars.read_bytes)
     except FileNotFoundError:
         # If there's no loose bars file, find one inside packs
         stock_pack = util.get_game_file(f'Pack/{bars_file.parent.parent.parent.name}')
         stock_bars = oead.Sarc(stock_pack.read_bytes()).get_file(f"Sound/Resource/{bars_file.name}")
-    # Get the stock tracks
-    stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
+        # Get the stock tracks
+        stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
     return stock_tracks[bfstp_name]
 
 def convert_bflim(sblarc: Path) -> None:
@@ -288,7 +295,11 @@ def convert(mod: Path) -> None:
 
         # Convert supported files
         for file in files:
+            # try:
             convert_files(file, mod_path)
+            # except Exception as err:
+            #     logging.exception(err)
+
         
         # Pack the converted mod into a new bnp
         out = mod.with_name(f"{mod.stem}_switch.bnp")
@@ -315,7 +326,8 @@ def convert(mod: Path) -> None:
                     elif all(i not in warning for i in supp_formats):
                         file.write(warning + "\n")
 
-    except Exception:
+    except Exception as err:
+        # logging.exception(err)
         print(traceback.format_exc())
         # clean_up()
 
@@ -340,6 +352,9 @@ def main() -> None:
     
     for mod in mods:
         convert(Path(mod))
+
+    # if Path("error.log").exists():
+    #     print("It seems some files could not be converted. Please check error.log for more info.")
 
     if (Path('BfresPlatformConverter').exists() or Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()) and not downloaded:
         keep = confirm_prompt("Would you like to keep the downloaded files?")
