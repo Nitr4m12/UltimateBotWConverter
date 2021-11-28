@@ -54,7 +54,7 @@ def write_sarc(sarc: oead.Sarc, sarc_path: Path, sarc_file: Path) -> None:
     else:
         sarc_file.write_bytes(oead.yaz0.compress(new_sarc.write()[1]))
 
-def convert_fres(sbfres: Path) -> None:
+def convert_bfres(sbfres: Path) -> None:
     # Convert sbfres files
     if not Path('BfresPlatformConverter').exists():
         # Code adapted from https://gist.github.com/hantoine/c4fc70b32c2d163f604a8dc2a050d5f6
@@ -64,7 +64,7 @@ def convert_fres(sbfres: Path) -> None:
         zipfile = ZipFile(BytesIO(http_response.read()))
         zipfile.extractall(path='BfresPlatformConverter')
 
-    # If our FRES file is a texture, use the Tex2 file which should be in the same folder...
+    # If our BFRES file is a texture, use the Tex2 file which should be in the same folder...
     if '.Tex1' in sbfres.suffixes:
         bfres = util.unyaz_if_needed(sbfres.read_bytes())
         tex2 = Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex2")}')
@@ -72,12 +72,12 @@ def convert_fres(sbfres: Path) -> None:
             tex2b = util.unyaz_if_needed(tex2.read_bytes())
             tex2.write_bytes(tex2b)
             sbfres.write_bytes(bfres)
-    # ...else, work with our FRES file only
+    # ...else, work with our BFRES file only
     else:
         bfres = util.unyaz_if_needed(sbfres.read_bytes())
         sbfres.write_bytes(bfres)
 
-    # Convert the FRES file, formatting the path to the converter according to the OS
+    # Convert the BFRES file, formatting the path to the converter according to the OS
     if system() == "Windows":
         run(["BfresPlatformConverter\\BfresPlatformConverter.exe", str(sbfres)])
     else:
@@ -94,6 +94,27 @@ def convert_fres(sbfres: Path) -> None:
         c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
         sbfres.write_bytes(c_bfres)
 
+def convert_havok_standalone(hkx: Path) -> None:
+    hkx_c = f".{sep}HKXConvert.exe" if system() == "Windows" else f".{sep}HKXConvert"
+    # Convert havok files unsupported by BCML
+    if system() == "Windows" and not Path('HKXConvert.exe').exists():
+        # Download HKXConvert if it's not already in the system
+        print("Downloading HKXConvert...")
+        filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert.exe', filename='HKXConvert.exe')
+    elif not Path('HKXConvert').exists() and (system() == "Linux" or system() == "macOS"):
+        print("Downloading HKXConvert...")
+        # Download HKXConvert if it's not already in the system
+        filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
+    # Make sure we can run the program by setting the correct permissions
+    Path(f'{hkx_c}').chmod(0o755)
+
+    # Convert every hkx found into json, and then to switch
+    print(f"Converting {hkx}")
+    run([hkx_c, 'hkx2json', hkx])
+    hkx.unlink()
+    run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
+    Path(f'{splitext(hkx)[0]}.json').unlink()
+    print(f'HKX file {hkx} converted!')
 
 def convert_havok(actorpack: Path) -> None:
     hkx_c = f".{sep}HKXConvert.exe" if system() == "Windows" else f".{sep}HKXConvert"
@@ -117,16 +138,16 @@ def convert_havok(actorpack: Path) -> None:
     # Look in the actor pack's files for hkx files.
     hkxs = actor_path.rglob('*.hk*')
     for hkx in hkxs:
-        # Convert every hkx found into json, and then to switch
-        print(f"Converting {hkx}")
-        run([hkx_c, 'hkx2json', hkx])
-        hkx.unlink()
-        run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
-        Path(f'{splitext(hkx)[0]}.json').unlink()
-    if hkxs:
-        # Write the new actor file
-        print(f"HKX files from {actorpack.name} converted. Saving...")
-        write_sarc(actor, actor_path, actorpack)
+        if hkx.suffix == ".hkcl" or hkx.suffix == ".hkrg":
+            # Convert every hkx found into json, and then to switch
+            print(f"Converting {hkx}")
+            run([hkx_c, 'hkx2json', hkx])
+            hkx.unlink()
+            run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
+            Path(f'{splitext(hkx)[0]}.json').unlink()
+    # Write the new actor file
+    print(f"HKX files from {actorpack.name} converted. Saving...")
+    write_sarc(actor, actor_path, actorpack)
 
     # Remove the temporary folder
     shutil.rmtree(actor_path)
@@ -183,7 +204,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
         if file.suffix in (".sbfres", ".sbitemico"):
             # Convert FRES files
             if ".Tex2" not in file.suffixes:
-                convert_fres(file)
+                convert_bfres(file)
 
         elif file.suffix == ".sbactorpack":
             # Convert havok files inside actor packs
@@ -244,7 +265,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
 
         elif file.suffix == ".hkcl":
             # If there's an hkcl file not in an actorpack, convert it as well
-            convert_havok(file)
+            convert_havok_standalone(file)
 
 def clean_up() -> None:
     if Path('HKXConvert').exists():
