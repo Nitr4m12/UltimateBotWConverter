@@ -317,13 +317,8 @@ def convert(mod: Path) -> None:
         if all(i not in warning for warning in warnings for i in supp_formats):
             with open("error.log", "a", encoding="utf-8") as file:
                 for warning in warnings:
-                    # Write BCML's warning to a file
-                    if isinstance(warning, list):
-                        for error in warning:
-                            if all(i not in error for i in supp_formats):
-                                file.write(error + "\n")
-                        
-                    elif all(i not in warning for i in supp_formats):
+                    # Write BCML's warning to a file    
+                    if all(i not in warning for i in supp_formats):
                         file.write(warning + "\n")
 
     except Exception as err:
