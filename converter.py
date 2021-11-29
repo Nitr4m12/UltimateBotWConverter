@@ -26,10 +26,11 @@ import oead
 # Construct an argument parser
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
 parser.add_argument("bnp", nargs='+')
+parser.add_argument("-log", "--log-level", default="warning", help="Set the logging level. Example --log-level debug. Default is warning")
 args = parser.parse_args()
 
 # Error logging
-logging.basicConfig(filename="error.log", filemode="w", level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+logging.basicConfig(filename="error.log", filemode="w", level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
 
 # Supported formats
@@ -273,8 +274,8 @@ def convert_files(file: Path, mod_path: Path) -> None:
                     try:
                         convert_files(new, mod_path)
                     except Exception as err:
-                        logging.info(f"It seems {new} could not be converted")
-                        logging.exception(err)
+                        logging.warning(f"{new} could not be converted")
+                        logging.debug(err)
                 write_sarc(pack, pack_path, file)
                 shutil.rmtree(pack_path)
 
@@ -310,9 +311,10 @@ def convert(mod: Path) -> None:
             try:
                 convert_files(file, mod_path)
             except Exception as err:
-                logging.info(f"It seems {file} could not be converted")
-                logging.exception(err)
+                logging.warning(f"{file} could not be converted")
+                logging.debug(err)
 
+        # Update the RSTB
         with Pool(maxtasksperchild=500) as pool:
             with util.TempSettingsContext({"wiiu": False}):
                 rstb_log = mod_path / "logs" / "rstb.json"
@@ -374,8 +376,8 @@ def main() -> None:
     for mod in mods:
         convert(Path(mod))
 
-    # if Path("error.log").exists():
-    #     print("It seems some files could not be converted. Please check error.log for more info.")
+    if Path("error.log").stat().st_size != 0:
+        print("It seems some files could not be converted. Please check error.log for more info.")
 
     if (Path('BfresPlatformConverter').exists() or Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()) and not downloaded:
         keep = confirm_prompt("Would you like to keep the downloaded files?")
