@@ -13,7 +13,7 @@ from itertools import islice
 import shutil
 import argparse
 import traceback
-# import logging
+import logging
 
 import oead
 from bcml.install import open_mod
@@ -27,12 +27,12 @@ parser = argparse.ArgumentParser(description="Converts mods in BNP format using 
 parser.add_argument("bnp", nargs='+')
 args = parser.parse_args()
 
-# # Error logging
-# logging.basicConfig(filename="error.log", filemode="w", level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-# logger = logging.getLogger(__name__)
+# Error logging
+logging.basicConfig(filename="error.log", filemode="w", level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+logger = logging.getLogger(__name__)
 
 # Supported formats
-supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".bars", ".bfstm", ".bflim", ".sblarc"]
+supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".bars", ".bfstm", ".bflim", ".sblarc"]
 
 def confirm_prompt(question: str) -> bool:
     # https://gist.github.com/garrettdreyfus/8153571
@@ -165,10 +165,17 @@ def get_stock_bfstp(bfstp_name: str, bars_file: Path):
         stock_tracks,_ = bars.get_bars_tracks(stock_bars.read_bytes)
     except FileNotFoundError:
         # If there's no loose bars file, find one inside packs
-        stock_pack = util.get_game_file(f'Pack/{bars_file.parent.parent.parent.name}')
-        stock_bars = oead.Sarc(stock_pack.read_bytes()).get_file(f"Sound/Resource/{bars_file.name}")
-        # Get the stock tracks
-        stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
+        try:
+            stock_pack = util.get_game_file(f'Pack/{bars_file.parent.parent.parent.name}')
+            stock_bars = oead.Sarc(stock_pack.read_bytes()).get_file(f"Sound/Resource/{bars_file.name}")
+            # Get the stock tracks
+            stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
+        except FileNotFoundError:
+            # If there's no loose bars file, find one inside packs
+            stock_pack = util.get_game_file(f'Event/{bars_file.parent.parent.parent.name}')
+            stock_bars = oead.Sarc(util.unyaz_if_needed(stock_pack.read_bytes())).get_file(f"Sound/Resource/{bars_file.name}")
+            # Get the stock tracks
+            stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
     return stock_tracks[bfstp_name]
 
 def convert_bflim(sblarc: Path) -> None:
@@ -254,7 +261,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
             file.write_bytes(bytes(new_bfstm))
             print("Successfully converted " + file.name + "!")
 
-        elif file.suffix == ".pack": #or file.suffix == ".sbeventpack":
+        elif file.suffix == ".pack" or file.suffix == ".sbeventpack":
             # Convert files inside of pack files
             pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
             pack_path = Path(file.name)
@@ -262,7 +269,11 @@ def convert_files(file: Path, mod_path: Path) -> None:
                 extract_sarc(pack, pack_path)
                 new_files = pack_path.rglob('*.*')
                 for new in new_files:
-                    convert_files(new, mod_path)
+                    try:
+                        convert_files(new, mod_path)
+                    except Exception as err:
+                        logging.info(f"It seems {new} could not be converted")
+                        logging.exception(err)
                 write_sarc(pack, pack_path, file)
                 shutil.rmtree(pack_path)
 
@@ -295,10 +306,11 @@ def convert(mod: Path) -> None:
 
         # Convert supported files
         for file in files:
-            # try:
-            convert_files(file, mod_path)
-            # except Exception as err:
-            #     logging.exception(err)
+            try:
+                convert_files(file, mod_path)
+            except Exception as err:
+                logging.info(f"It seems {file} could not be converted")
+                logging.exception(err)
 
         
         # Pack the converted mod into a new bnp
@@ -314,7 +326,7 @@ def convert(mod: Path) -> None:
         run(x_args)
 
         # Write BCML's warning to a file
-        if all(i not in warning for warning in warnings for i in supp_formats):
+        if warnings:
             with open("error.log", "a", encoding="utf-8") as file:
                 for warning in warnings:
                     # Write BCML's warning to a file    
