@@ -10,17 +10,18 @@ from platform import system
 from json import loads
 from pathlib import Path
 from itertools import islice
+from multiprocessing import Pool
 import shutil
 import argparse
 import traceback
 import logging
 
-import oead
 from bcml.install import open_mod
 from bcml.dev import convert_mod
 from bcml import util
 from bars_py import bars, bcf_converter
 from bflim_convertor import bntx_dds_injector as bntx
+import oead
 
 # Construct an argument parser
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
@@ -312,6 +313,19 @@ def convert(mod: Path) -> None:
                 logging.info(f"It seems {file} could not be converted")
                 logging.exception(err)
 
+        with Pool(maxtasksperchild=500) as pool:
+            with util.TempSettingsContext({"wiiu": False}):
+                rstb_log = mod_path / "logs" / "rstb.json"
+                if rstb_log.exists():
+                    # pylint: disable=import-outside-toplevel
+                    rstb_log.unlink()
+                    from bcml.install import find_modded_files
+                    from bcml.mergers.rstable import RstbMerger
+
+                    modded_files = find_modded_files(mod_path, pool)
+                    merger = RstbMerger()
+                    merger.set_pool(pool)
+                    merger.log_diff(mod_path, modded_files)
         
         # Pack the converted mod into a new bnp
         out = mod.with_name(f"{mod.stem}_switch.bnp")
