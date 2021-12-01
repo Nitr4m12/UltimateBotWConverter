@@ -191,12 +191,12 @@ def convert_bflim(sblarc: Path) -> None:
         # Get the pack file where the sblarc comes from
         stock_pack = util.get_game_file(f"Pack/{sblarc.parent.parent.name}")
 
-        try:
+        if sblarc.parent.parent.name == "Bootup.pack":
             # If the sblarc is in Bootup.pack, get a stock Common.sblarc
             stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Common.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
 
-        except (oead.InvalidDataError, AttributeError):
+        elif sblarc.parent.parent.name == "Title.pack":
             # If the sblarc is in Title.pack, get a stock Title.sblarc
             stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Title.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
@@ -282,8 +282,12 @@ def convert_files(file: Path, mod_path: Path) -> None:
                 shutil.rmtree(pack_path)
 
         elif file.suffix == ".sblarc":
-            # Convert bflim files inside of sblarc files
-            convert_bflim(file)
+            if file.name == "BootUp.sblarc":
+                logging.warning("A BootUp.sblarc was found! Note that these files are not used on Switch, so it was deleted.")
+                file.unlink()
+            else:
+                # Convert bflim files inside of sblarc files
+                convert_bflim(file)
 
         elif file.suffix == ".hkcl":
             # If there's an hkcl file not in an actorpack, convert it as well
