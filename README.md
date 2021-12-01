@@ -8,7 +8,7 @@ DISCLAIMER: While I made modifications of my own to various of the tools include
 - A legal, unpacked dump of BoTW Switch (1.6.0)
 - [BotW Cross-Platform Mod Loader](https://github.com/NiceneNerd/BCML)
 
-For obtaining a BoTW dump, see https://zeldamods.org/wiki/Help:Dumping_games. BCML can be obtained through PyPI, using `pip install bcml`
+For obtaining a BoTW dump, see https://zeldamods.org/wiki/Help:Dumping_games. BCML can be obtained through python's PyPI, using `pip install bcml`
 
 # Usage
 ### Linux:
