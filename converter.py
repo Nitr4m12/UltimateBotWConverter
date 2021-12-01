@@ -141,6 +141,7 @@ def convert_havok(actorpack: Path) -> None:
     # Use the actorpack's name to create a new folder to write its contents in
     actor_path = Path(actorpack.name)
     actor = oead.Sarc(util.unyaz_if_needed(actorpack.read_bytes()))
+    print(f"Extracting {actorpack.name}...")
     extract_sarc(actor, actor_path)
 
     # Look in the actor pack's files for hkx files.
@@ -148,7 +149,7 @@ def convert_havok(actorpack: Path) -> None:
     for hkx in hkxs:
         if hkx.suffix == ".hkcl" or hkx.suffix == ".hkrg":
             # Convert every hkx found into json, and then to switch
-            print(f"Converting {hkx}")
+            print(f"Converting {hkx.name}")
             run([hkx_c, 'hkx2json', hkx])
             hkx.unlink()
             run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
@@ -168,12 +169,13 @@ def get_stock_bfstp(bfstp_name: str, bars_file: Path):
     except FileNotFoundError:
         # If there's no loose bars file, find one inside packs
         try:
+            # Look in regular packs
             stock_pack = util.get_game_file(f'Pack/{bars_file.parent.parent.parent.name}')
             stock_bars = oead.Sarc(stock_pack.read_bytes()).get_file(f"Sound/Resource/{bars_file.name}")
             # Get the stock tracks
             stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
         except FileNotFoundError:
-            # If there's no loose bars file, find one inside packs
+            # Look in event packs
             stock_pack = util.get_game_file(f'Event/{bars_file.parent.parent.parent.name}')
             stock_bars = oead.Sarc(util.unyaz_if_needed(stock_pack.read_bytes())).get_file(f"Sound/Resource/{bars_file.name}")
             # Get the stock tracks
@@ -274,8 +276,8 @@ def convert_files(file: Path, mod_path: Path) -> None:
                     try:
                         convert_files(new, mod_path)
                     except Exception as err:
-                        logging.warning(f"{new} could not be converted")
-                        logging.debug(err)
+                        logging.warning(f"{new.relative_to(pack_path)} could not be converted")
+                        logging.debug(err, exc_info=True)
                 write_sarc(pack, pack_path, file)
                 shutil.rmtree(pack_path)
 
@@ -311,8 +313,8 @@ def convert(mod: Path) -> None:
             try:
                 convert_files(file, mod_path)
             except Exception as err:
-                logging.warning(f"{file} could not be converted")
-                logging.debug(err)
+                logging.warning(f"{file.relative_to(mod_path)} could not be converted")
+                logging.debug(err, exc_info=True)
 
         # Update the RSTB
         with Pool(maxtasksperchild=500) as pool:
