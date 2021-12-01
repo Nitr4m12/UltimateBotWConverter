@@ -165,7 +165,7 @@ def get_stock_bfstp(bfstp_name: str, bars_file: Path):
     # Look for the bars file containing the bfstp
     try:
         stock_bars = util.get_game_file(f"Sound/Resource/{bars_file.name}")
-        stock_tracks,_ = bars.get_bars_tracks(stock_bars.read_bytes)
+        stock_tracks,_ = bars.get_bars_tracks(stock_bars.read_bytes())
     except FileNotFoundError:
         # If there's no loose bars file, find one inside packs
         try:
@@ -178,6 +178,8 @@ def get_stock_bfstp(bfstp_name: str, bars_file: Path):
             # Look in event packs
             stock_pack = util.get_game_file(f'Event/{bars_file.parent.parent.parent.name}')
             stock_bars = oead.Sarc(util.unyaz_if_needed(stock_pack.read_bytes())).get_file(f"Sound/Resource/{bars_file.name}")
+            if not isinstance(stock_bars, oead.File):
+                raise FileNotFoundError(f"File Sound/Resource/{bars_file.name} was not found in game dump.")
             # Get the stock tracks
             stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
     return stock_tracks[bfstp_name]
@@ -283,7 +285,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
 
         elif file.suffix == ".sblarc":
             if file.name == "BootUp.sblarc":
-                logging.warning("A BootUp.sblarc was found! Note that these files are not used on Switch, so it was deleted.")
+                logging.warning("A BootUp.sblarc was found! These files are not used on Switch, so it was skipped.")
                 file.unlink()
             else:
                 # Convert bflim files inside of sblarc files
@@ -325,7 +327,6 @@ def convert(mod: Path) -> None:
             with util.TempSettingsContext({"wiiu": False}):
                 rstb_log = mod_path / "logs" / "rstb.json"
                 if rstb_log.exists():
-                    # pylint: disable=import-outside-toplevel
                     rstb_log.unlink()
                     from bcml.install import find_modded_files
                     from bcml.mergers.rstable import RstbMerger
