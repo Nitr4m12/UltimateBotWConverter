@@ -150,7 +150,7 @@ def convert_havok(actorpack: Path) -> None:
         if hkx.suffix == ".hkcl" or hkx.suffix == ".hkrg":
             # Convert every hkx found into json, and then to switch
             print(f"Converting {hkx.name}")
-            run([hkx_c, 'hkx2json', hkx])
+            run([hkx_c, 'hkx2json', str(hkx)])
             hkx.unlink()
             run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
             Path(f'{splitext(hkx)[0]}.json').unlink()
