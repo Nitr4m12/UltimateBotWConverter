@@ -34,7 +34,7 @@ logging.basicConfig(filename="error.log", filemode="w", level=args.log_level.upp
 logger = logging.getLogger(__name__)
 
 # Supported formats
-supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".bars", ".bfstm", ".bflim", ".sblarc"]
+supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".bars", ".bfstm", ".bflim", ".sblarc"]
 
 def confirm_prompt(question: str) -> bool:
     # https://gist.github.com/garrettdreyfus/8153571
@@ -80,6 +80,8 @@ def convert_bfres(sbfres: Path) -> None:
             tex2b = util.unyaz_if_needed(tex2.read_bytes())
             tex2.write_bytes(tex2b)
             sbfres.write_bytes(bfres)
+        else:
+            raise FileNotFoundError("Could not find Tex2 file for mipmap data.")
     # ...else, work with our BFRES file only
     else:
         bfres = util.unyaz_if_needed(sbfres.read_bytes())
@@ -93,11 +95,10 @@ def convert_bfres(sbfres: Path) -> None:
 
     # Save our new file
     if sbfres.suffixes == ['.Tex1', '.sbfres']:
-        if tex2.exists():
-            c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name.replace("Tex1", "Tex")}').read_bytes())
-            sbfres.write_bytes(c_bfres)
-            sbfres.rename(Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex")}'))
-            tex2.unlink()
+        c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name.replace("Tex1", "Tex")}').read_bytes())
+        sbfres.write_bytes(c_bfres)
+        sbfres.rename(Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex")}'))
+        tex2.unlink()
     elif sbfres.suffixes != ['.Tex2', '.sbfres']:
         c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
         sbfres.write_bytes(c_bfres)
@@ -117,12 +118,19 @@ def convert_havok_standalone(hkx: Path) -> None:
     Path(f'{hkx_c}').chmod(0o755)
 
     # Convert every hkx found into json, and then to switch
-    print(f"Converting {hkx}")
-    run([hkx_c, 'hkx2json', hkx])
+    print(f"Converting {hkx.name}")
+    if hkx.suffix.startswith(".s"):
+        unyazed_hkx = util.unyaz_if_needed(hkx.read_bytes())
+        hkx.write_bytes(unyazed_hkx)
+
+    run([hkx_c, 'hkx2json', str(hkx)])
     hkx.unlink()
-    run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
+    run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json', str(hkx)])
     Path(f'{splitext(hkx)[0]}.json').unlink()
-    print(f'HKX file {hkx} converted!')
+
+    if hkx.suffix.startswith(".s"):
+        yazed_hkx = oead.yaz0.compress(hkx.read_bytes())
+        hkx.write_bytes(yazed_hkx)
 
 def convert_havok(actorpack: Path) -> None:
     hkx_c = f".{sep}HKXConvert.exe" if system() == "Windows" else f".{sep}HKXConvert"
@@ -145,15 +153,24 @@ def convert_havok(actorpack: Path) -> None:
     extract_sarc(actor, actor_path)
 
     # Look in the actor pack's files for hkx files.
-    hkxs = actor_path.rglob('*.hk*')
+    hkxs = actor_path.rglob('*.*hk*')
     for hkx in hkxs:
-        if hkx.suffix == ".hkcl" or hkx.suffix == ".hkrg":
+        if hkx.suffix in [".hkcl", ".hkrg", ".shknm2"]:
             # Convert every hkx found into json, and then to switch
             print(f"Converting {hkx.name}")
+            if hkx.suffix.startswith(".s"):
+                unyazed_hkx = util.unyaz_if_needed(hkx.read_bytes())
+                hkx.write_bytes(unyazed_hkx)
+
             run([hkx_c, 'hkx2json', str(hkx)])
             hkx.unlink()
-            run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json'])
+            run([hkx_c, 'json2hkx', '--nx', f'{splitext(hkx)[0]}.json', str(hkx)])
             Path(f'{splitext(hkx)[0]}.json').unlink()
+
+            if hkx.suffix.startswith(".s"):
+                yazed_hkx = oead.yaz0.compress(hkx.read_bytes())
+                hkx.write_bytes(yazed_hkx)
+                
     # Write the new actor file
     print(f"HKX files from {actorpack.name} converted. Saving...")
     write_sarc(actor, actor_path, actorpack)
@@ -209,9 +226,15 @@ def convert_bflim(sblarc: Path) -> None:
         Path(blarc_path / bntx_file.name).write_bytes(bntx_file.data)
 
         for bflim in blarc_path.rglob('*.bflim'):
-            # Inject every bflim found into the bntx file
-            bntx.tex_inject(blarc_path / bntx_file.name, bflim, False)
-            Path(bflim).unlink()
+            try:
+                # Inject every bflim found into the bntx file
+                bntx.tex_inject(blarc_path / bntx_file.name, bflim, False)
+                Path(bflim).unlink()
+            except Exception as err:
+                if Path(f'{bflim.stem}.dds').exists():
+                    Path(f'{bflim.stem}.dds').unlink()
+                logging.warning(f"{bflim.relative_to(blarc_path)} could not be converted")
+                logging.debug(err, exc_info=True)
         # Write the new blarc file
         write_sarc(blarc, blarc_path, sblarc)
 
@@ -285,14 +308,14 @@ def convert_files(file: Path, mod_path: Path) -> None:
 
         elif file.suffix == ".sblarc":
             if file.name == "BootUp.sblarc":
-                logging.warning("A BootUp.sblarc was found! These files are not used on Switch, so it was skipped.")
+                logging.warning("A BootUp.sblarc was found! These files are not used on Switch, so it was skipped")
                 file.unlink()
             else:
                 # Convert bflim files inside of sblarc files
                 convert_bflim(file)
 
-        elif file.suffix == ".hkcl":
-            # If there's an hkcl file not in an actorpack, convert it as well
+        elif file.suffix in [".hkcl", ".hkrg", ".shknm2"]:
+            # If there's an hkx file not in an actorpack, convert it as well
             convert_havok_standalone(file)
 
 def clean_up() -> None:
@@ -314,17 +337,17 @@ def convert(mod: Path) -> None:
         # Run the mod through BCML's automatic converter first 
         warnings = convert_mod(mod_path, False, True)
 
-        # Convert supported files
-        for file in files:
-            try:
-                convert_files(file, mod_path)
-            except Exception as err:
-                logging.warning(f"{file.relative_to(mod_path)} could not be converted")
-                logging.debug(err, exc_info=True)
-
         # Update the RSTB
-        with Pool(maxtasksperchild=500) as pool:
-            with util.TempSettingsContext({"wiiu": False}):
+        with util.TempSettingsContext({"wiiu": False}):
+            # Convert supported files
+            for file in files:
+                try:
+                    convert_files(file, mod_path)
+                except Exception as err:
+                    logging.warning(f"{file.relative_to(mod_path)} could not be converted")
+                    logging.debug(err, exc_info=True)
+
+            with Pool(maxtasksperchild=500) as pool:
                 rstb_log = mod_path / "logs" / "rstb.json"
                 if rstb_log.exists():
                     rstb_log.unlink()
@@ -335,7 +358,7 @@ def convert(mod: Path) -> None:
                     merger = RstbMerger()
                     merger.set_pool(pool)
                     merger.log_diff(mod_path, modded_files)
-        
+    
         # Pack the converted mod into a new bnp
         out = mod.with_name(f"{mod.stem}_switch.bnp")
         if Path(out).exists():
@@ -374,11 +397,6 @@ def main() -> None:
     downloaded = False
     if Path('BfresPlatformConverter').exists() and (Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()):
         downloaded = True
-
-    # Set BCML to Switch mode
-    settings = util.get_settings()
-    settings["wiiu"] = False
-    util.save_settings()
     
     for mod in mods:
         convert(Path(mod))

@@ -40,11 +40,10 @@ def tex_inject(bntx: Path, bflim: Path, import_mips: bool):
 
     old_tex_size = list_item[o_tex].imageSize
     old_tex_num_mips = list_item[o_tex].numMips
-    
     tex_ = BNTX.inject(list_item[o_tex], tile_mode, srgb, sparse_binding, sparse_residency, mip_maps, old_tex_size, bftex)
 
     if tex_:
         # Write to the bntx
         BNTX.writeTex(bntx, tex_, old_tex_size, old_tex_num_mips)
     
-    Path(f'{Path(bflim).stem}.dds').unlink()
+    bftex.unlink()
