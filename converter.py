@@ -34,7 +34,7 @@ logging.basicConfig(filename="error.log", filemode="w", level=args.log_level.upp
 logger = logging.getLogger(__name__)
 
 # Supported formats
-supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".bars", ".bfstm", ".bflim", ".sblarc"]
+supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".bars", ".bfstm", ".bflim", ".sblarc", ".bcamanim"]
 
 def confirm_prompt(question: str) -> bool:
     # https://gist.github.com/garrettdreyfus/8153571
@@ -99,9 +99,11 @@ def convert_bfres(sbfres: Path) -> None:
         sbfres.write_bytes(c_bfres)
         sbfres.rename(Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex")}'))
         tex2.unlink()
-    elif sbfres.suffixes != ['.Tex2', '.sbfres']:
+    elif sbfres.suffix.startswith(".s"):
         c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
         sbfres.write_bytes(c_bfres)
+    else:
+        sbfres.write_bytes(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
 
 def convert_havok_standalone(hkx: Path) -> None:
     hkx_c = f".{sep}HKXConvert.exe" if system() == "Windows" else f".{sep}HKXConvert"
@@ -244,7 +246,7 @@ def convert_bflim(sblarc: Path) -> None:
 def convert_files(file: Path, mod_path: Path) -> None:
     # Convert supported files
     if file.exists() and file.stat().st_size != 0:
-        if file.suffix in (".sbfres", ".sbitemico"):
+        if file.suffix in (".sbfres", ".sbitemico", ".bcamanim"):
             # Convert FRES files
             if ".Tex2" not in file.suffixes:
                 convert_bfres(file)
