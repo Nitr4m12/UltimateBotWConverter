@@ -17,7 +17,7 @@ import argparse
 import traceback
 import logging
 
-from bcml.install import open_mod
+from bcml.install import open_mod, find_modded_files
 from bcml.dev import convert_mod
 from bcml import util
 from bars_py import bars, bcf_converter
@@ -35,10 +35,10 @@ logging.basicConfig(filename="error.log", filemode="w", level=args.log_level.upp
 logger = logging.getLogger(__name__)
 
 # Supported formats
-supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".bars", ".bfstm", ".bflim", ".bcamanim", ".sblarc"]
+supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".shksc", ".bars", ".bfstm", ".bflim", ".bcamanim", ".sblarc"]
 
 BFRES_EXT = [".sbfres", ".sbitemico", ".bcamanim"]
-HAVOK_EXT = [".hkcl", ".hkrg", "shknm2"]
+HAVOK_EXT = [".hkcl", ".hkrg", ".hkrb", ".shknm2", ".shksc"]
 LAYOUT_EXT = [".bflan", ".bgsh", ".bnsh", ".bushvt", ".bflyt", ".bflim", ".bntx"]
 SOUND_EXT = [".bfstm", ".bfstp", ".bfwav", ".bars"]
 
@@ -70,13 +70,6 @@ def write_sarc(sarc: oead.Sarc, sarc_path: Path, sarc_file: Path) -> None:
 
 def convert_bfres(sbfres: Path) -> None:
     # Convert sbfres files
-    if not Path('BfresPlatformConverter').exists():
-        # Code adapted from https://gist.github.com/hantoine/c4fc70b32c2d163f604a8dc2a050d5f6
-        # Extract BfresPlatformConverter if it's not already in the system
-        print("Downloading BfresPlatformConverter...")
-        http_response = urlopen('https://gamebanana.com/dl/485626')
-        zipfile = ZipFile(BytesIO(http_response.read()))
-        zipfile.extractall(path='BfresPlatformConverter')
 
     # If our BFRES file is a texture, use the Tex2 file which should be in the same folder...
     if '.Tex1' in sbfres.suffixes:
@@ -112,16 +105,8 @@ def convert_bfres(sbfres: Path) -> None:
         sbfres.write_bytes(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
 
 def convert_havok(hkx: Path) -> None:
-    hkx_c = ".\HKXConvert.exe" if system() == "Windows" else "./HKXConvert"
     # Convert havok files unsupported by BCML
-    if system() == "Windows" and not Path('HKXConvert.exe').exists():
-        # Download HKXConvert if it's not already in the system
-        print("Downloading HKXConvert...")
-        filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert.exe', filename='HKXConvert.exe')
-    elif system() == "Linux" and not Path('HKXConvert').exists():
-        print("Downloading HKXConvert...")
-        # Download HKXConvert if it's not already in the system
-        filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
+    hkx_c = ".\HKXConvert.exe" if system() == "Windows" else "./HKXConvert"
     # Make sure we can run the program by setting the correct permissions
     Path(f'{hkx_c}').chmod(0o755)
 
@@ -254,7 +239,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
                     new_files = pack_path.rglob('*.*')
                     for new in new_files:
                         try:
-                            convert_files(new, mod_path)
+                            convert_files(new, pack_path)
                         except Exception as err:
                             logging.warning(f"{new.relative_to(pack_path)} could not be converted")
                             logging.debug(err, exc_info=True)
@@ -283,6 +268,26 @@ def clean_up() -> None:
     shutil.rmtree('SwitchConverted', ignore_errors=True)
     shutil.rmtree('WiiUConverted', ignore_errors=True)
 
+def download_converters(files) -> None:
+    if any(hk.suffix in HAVOK_EXT for hk in files):
+        if system() == "Windows" and not Path('HKXConvert.exe').exists():
+            # Download HKXConvert if it's not already in the system
+            print("Downloading HKXConvert...")
+            filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert.exe', filename='HKXConvert.exe')
+        elif system() == "Linux" and not Path('HKXConvert').exists():
+            print("Downloading HKXConvert...")
+            # Download HKXConvert if it's not already in the system
+            filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
+
+    if any(bfres.suffix in BFRES_EXT for bfres in files):
+        if not Path('BfresPlatformConverter').exists():
+            # Code adapted from https://gist.github.com/hantoine/c4fc70b32c2d163f604a8dc2a050d5f6
+            # Extract BfresPlatformConverter if it's not already in the system
+            print("Downloading BfresPlatformConverter...")
+            http_response = urlopen('https://gamebanana.com/dl/485626')
+            zipfile = ZipFile(BytesIO(http_response.read()))
+            zipfile.extractall(path='BfresPlatformConverter')
+
 def convert(mod: Path) -> None:
     # Open the mod
     mod_path = open_mod(mod)
@@ -291,28 +296,19 @@ def convert(mod: Path) -> None:
     if meta["platform"] == "switch":
         raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
     files = mod_path.rglob('*.*')
-
+    download_converters(find_modded_files(mod_path))
     try:
-        # Run the mod through BCML's automatic converter first 
-        warnings = convert_mod(mod_path, False, True)
 
         with util.TempSettingsContext({"wiiu": False}):
             with Pool(maxtasksperchild=500) as pool:
                 # Convert supported files
                 pool.map(partial(convert_files, mod_path=mod_path), files)
+                pool.close()
+                pool.join()
+        
+        # Run the mod through BCML's automatic converter first 
+        warnings = convert_mod(mod_path, False, True)
 
-                # Update the RSTB
-                rstb_log = mod_path / "logs" / "rstb.json"
-                if rstb_log.exists():
-                    rstb_log.unlink()
-                    from bcml.install import find_modded_files
-                    from bcml.mergers.rstable import RstbMerger
-
-                    modded_files = find_modded_files(mod_path, pool)
-                    merger = RstbMerger()
-                    merger.set_pool(pool)
-                    merger.log_diff(mod_path, modded_files)
-    
         # Pack the converted mod into a new bnp
         out = mod.with_name(f"{mod.stem}_switch.bnp")
         if Path(out).exists():
