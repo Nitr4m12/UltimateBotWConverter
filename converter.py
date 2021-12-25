@@ -296,7 +296,7 @@ def convert(mod: Path) -> None:
     if meta["platform"] == "switch":
         raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
     files = mod_path.rglob('*.*')
-    download_converters(find_modded_files(mod_path))
+    # download_converters(find_modded_files(mod_path))
     try:
 
         with util.TempSettingsContext({"wiiu": False}):
