@@ -35,10 +35,10 @@ logging.basicConfig(filename="error.log", filemode="w", level=args.log_level.upp
 logger = logging.getLogger(__name__)
 
 # Supported formats
-supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".shksc", ".bars", ".bfstm", ".bflim", ".bcamanim", ".sblarc"]
+supp_formats = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".bars", ".bfstm", ".bflim", ".bcamanim", ".sblarc"]
 
 BFRES_EXT = [".sbfres", ".sbitemico", ".bcamanim"]
-HAVOK_EXT = [".hkcl", ".hkrg", ".hkrb", ".shknm2", ".shksc"]
+HAVOK_EXT = [".hkcl", ".hkrg", ".shknm2"]
 LAYOUT_EXT = [".bflan", ".bgsh", ".bnsh", ".bushvt", ".bflyt", ".bflim", ".bntx"]
 SOUND_EXT = [".bfstm", ".bfstp", ".bfwav", ".bars"]
 
