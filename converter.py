@@ -27,7 +27,7 @@ import oead
 # Construct an argument parser
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
 parser.add_argument("bnp", nargs='+')
-parser.add_argument("-o", "--output", help="Specify an output directory")
+parser.add_argument("-o", "--output", help="Specify an output file")
 parser.add_argument("-log", "--log-level", default="warning", help="Set the logging level. Example --log-level debug. Default is warning")
 args = parser.parse_args()
 
@@ -311,7 +311,7 @@ def convert(mod: Path) -> None:
         warnings = convert_mod(mod_path, False, True)
 
         # Pack the converted mod into a new bnp
-        out = Path(f"{args.output}{sep}{mod.stem}_switch.bnp") if args.output else mod.with_name(f"{mod.stem}_switch.bnp")
+        out = Path(f'{args.output}.bnp') if args.output else mod.with_name(f"{mod.stem}_switch.bnp")
         if Path(out).exists():
             Path(out).unlink()
         x_args = [
