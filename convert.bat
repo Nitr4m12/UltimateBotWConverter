@@ -36,11 +36,11 @@ echo    ZZZZZZ
 FOR %%A IN (%*) DO (
 echo.
 set /A COUNTER+=1
-echo Ultimate BotW Converter is converting !COUNTER! of %TOTAL% BNP files, please wait...
+echo Attempting to convert !COUNTER! of %TOTAL% mods, please wait...
 echo.
 python converter.py %%A
 )
 echo.
-echo Converted %COUNTER% BNP files to Switch
+echo Processed %COUNTER% mods.
 echo.
 pause
