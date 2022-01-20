@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from subprocess import run
 from os.path import sep, splitext
 from glob import glob
@@ -9,9 +8,7 @@ from zipfile import ZipFile
 from platform import system 
 from json import loads
 from pathlib import Path
-from itertools import islice
-from multiprocessing import Pool
-from functools import partial
+from multiprocessing import get_context
 import shutil
 import argparse
 import traceback
@@ -23,6 +20,14 @@ from bcml import util
 from bars_py import bars, bcf_converter
 from bflim_convertor import bntx_dds_injector as bntx
 import oead
+
+# Import dll libraries
+BFRES_DLL = Path(__file__).parent / "bfres_converter" / "BfresLibrary"
+import clr
+clr.AddReference(str(BFRES_DLL))
+from System.IO import MemoryStream
+from BfresLibrary import ResFile
+from BfresLibrary.PlatformConverters import ConverterHandle
 
 # Construct an argument parser
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
@@ -70,40 +75,42 @@ def write_sarc(sarc: oead.Sarc, sarc_path: Path, sarc_file: Path) -> None:
         sarc_file.write_bytes(oead.yaz0.compress(new_sarc.write()[1]))
 
 def convert_bfres(sbfres: Path) -> None:
-    # Convert sbfres files
+    name: str = sbfres.stem
+    ext: str = sbfres.suffix
 
-    # If our BFRES file is a texture, use the Tex2 file which should be in the same folder...
-    if '.Tex1' in sbfres.suffixes:
-        bfres = util.unyaz_if_needed(sbfres.read_bytes())
-        tex2 = Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex2")}')
-        if tex2.exists():
-            tex2b = util.unyaz_if_needed(tex2.read_bytes())
-            tex2.write_bytes(tex2b)
-            sbfres.write_bytes(bfres)
-        else:
+    bfres: bytes = util.unyaz_if_needed(sbfres.read_bytes())
+
+    res_file: ResFile = ResFile(MemoryStream(bfres))
+
+    if ".Tex1" in sbfres.suffixes: #and res_file.Textures.Values.Max(x.MipCount > 1):
+        tex2: Path = Path(str(sbfres).replace("Tex1", "Tex2"))
+        if not tex2.exists():
             raise FileNotFoundError("Could not find Tex2 file for mipmap data.")
-    # ...else, work with our BFRES file only
-    else:
-        bfres = util.unyaz_if_needed(sbfres.read_bytes())
-        sbfres.write_bytes(bfres)
 
-    # Convert the BFRES file, formatting the path to the converter according to the OS
-    if system() == "Windows":
-        run(["BfresPlatformConverter\\BfresPlatformConverter.exe", str(sbfres)])
-    else:
-        run(['mono', "BfresPlatformConverter/BfresPlatformConverter.exe", str(sbfres)])
+        res_file_tex2 = ResFile(MemoryStream(util.unyaz_if_needed(tex2.read_bytes())))
+        for tex in res_file_tex2.Textures:
+            idx = res_file_tex2.Textures.index(tex)
+            res_file.Textures[idx].Value.MipSwizzle = tex.Value.Swizzle
+            res_file.Textures[idx].Value.MipData = tex.Value.MipData
 
-    # Save our new file
-    if sbfres.suffixes == ['.Tex1', '.sbfres']:
-        c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name.replace("Tex1", "Tex")}').read_bytes())
-        sbfres.write_bytes(c_bfres)
-        sbfres.rename(Path(f'{sbfres.parent}{sep}{sbfres.name.replace("Tex1", "Tex")}'))
-        tex2.unlink()
-    elif sbfres.suffix.startswith(".s"):
-        c_bfres = oead.yaz0.compress(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
-        sbfres.write_bytes(c_bfres)
-    else:
-        sbfres.write_bytes(Path(f'SwitchConverted{sep}{sbfres.name}').read_bytes())
+        name = name.replace("Tex1", "Tex")
+        res_file.name = name
+    
+    if not res_file.IsPlatformSwitch:
+        res_file.ChangePlatform(True, 4096, 0, 5, 0, 3, ConverterHandle.BOTW)
+        res_file.alignment = 0x0C
+
+        if sbfres.suffix.startswith(".s"):
+            mem = MemoryStream()
+            res_file.Save(mem)
+            sbfres.write_bytes(oead.yaz0.compress(bytes(mem.ToArray())))
+        else:
+            res_file.Save(str(sbfres))
+        
+        if ".Tex1" in sbfres.suffixes:
+            tex2.unlink()
+            
+        sbfres.rename(sbfres.with_name(f'{name}{ext}'))
 
 def convert_havok(hkx: Path) -> None:
     # Convert havok files unsupported by BCML
@@ -296,14 +303,14 @@ def convert(mod: Path) -> None:
         meta = loads((mod_path / "info.json").read_text("utf-8"))
     if meta["platform"] == "switch":
         raise RuntimeError("Ultimate BoTW Converter does not support Switch to Wii U conversion yet!")
-    files = mod_path.rglob('*.*')
+    files = [(file, mod_path) for file in mod_path.rglob('*.*')]
     # download_converters(find_modded_files(mod_path))
     try:
 
         with util.TempSettingsContext({"wiiu": False}):
-            with Pool(maxtasksperchild=500) as pool:
+            with get_context("spawn").Pool(maxtasksperchild=500) as pool:
                 # Convert supported files
-                pool.map(partial(convert_files, mod_path=mod_path), files)
+                pool.starmap(convert_files, files)
                 pool.close()
                 pool.join()
         
@@ -360,6 +367,5 @@ def main() -> None:
         if not keep:
             clean_up()
 
-
 if __name__ == "__main__":
-    main()      
+    main()
