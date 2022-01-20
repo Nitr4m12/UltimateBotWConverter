@@ -22,7 +22,7 @@ from bflim_convertor import bntx_dds_injector as bntx
 import oead
 
 # Import dll libraries
-BFRES_DLL = Path(__file__).parent / "net_libs" / "BfresLibrary"
+BFRES_DLL = Path(__file__).parent / "dotnet_libs" / "BfresLibrary"
 import clr
 clr.AddReference(str(BFRES_DLL))
 from System.IO import MemoryStream
