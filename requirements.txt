@@ -1,0 +1,2 @@
+bcml~=3.7.2
+pythonnet~=3.0.0a2
