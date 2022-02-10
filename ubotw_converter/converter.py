@@ -17,7 +17,7 @@ import logging
 from bcml.install import open_mod, find_modded_files
 from bcml.dev import convert_mod
 from bcml import util
-from bars_py import bars, bcf_converter
+from .bars_py import bars, bcf_converter
 from .bflim_convertor import bntx_dds_injector as bntx
 import oead
 
