@@ -273,26 +273,6 @@ def clean_up() -> None:
     if Path('HKXConvert').exists():
         Path('HKXConvert').unlink()
 
-def download_converters(files) -> None:
-    if any(hk.suffix in HAVOK_EXT for hk in files):
-        if system() == "Windows" and not Path('HKXConvert.exe').exists():
-            # Download HKXConvert if it's not already in the system
-            print("Downloading HKXConvert...")
-            filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert.exe', filename='HKXConvert.exe')
-        elif system() == "Linux" and not Path('HKXConvert').exists():
-            print("Downloading HKXConvert...")
-            # Download HKXConvert if it's not already in the system
-            filename, headers = urlretrieve('https://github.com/krenyy/HKXConvert/releases/download/1.0.1/HKXConvert', filename='HKXConvert')
-
-    if any(bfres.suffix in BFRES_EXT for bfres in files):
-        if not Path('BfresPlatformConverter').exists():
-            # Code adapted from https://gist.github.com/hantoine/c4fc70b32c2d163f604a8dc2a050d5f6
-            # Extract BfresPlatformConverter if it's not already in the system
-            print("Downloading BfresPlatformConverter...")
-            http_response = urlopen('https://gamebanana.com/dl/485626')
-            zipfile = ZipFile(BytesIO(http_response.read()))
-            zipfile.extractall(path='BfresPlatformConverter')
-
 def convert(mod: Path) -> None:
     # Open the mod
     mod_path = open_mod(mod)
@@ -362,8 +342,3 @@ def main() -> None:
 
     if Path("error.log").stat().st_size != 0:
         print("It seems some files could not be converted. Please check error.log for more info.")
-
-    if (Path('BfresPlatformConverter').exists() or Path('HKXConvert').exists() or Path('HKXConvert.exe').exists()) and not downloaded:
-        keep = confirm_prompt("Would you like to keep the downloaded files?")
-        if not keep:
-            clean_up()
