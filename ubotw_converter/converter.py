@@ -25,7 +25,7 @@ import oead
 BFRES_DLL = Path(__file__).parent / "dotnet_libs" / "BfresLibrary"
 import clr
 clr.AddReference(str(BFRES_DLL))
-from System.IO import MemoryStream
+from System.IO import MemoryStream, File
 from BfresLibrary import ResFile
 from BfresLibrary.PlatformConverters import ConverterHandle
 
@@ -33,6 +33,7 @@ from BfresLibrary.PlatformConverters import ConverterHandle
 parser = argparse.ArgumentParser(description="Converts mods in BNP format using BCML's converter, complemented by some additional tools")
 parser.add_argument("bnp", nargs='+')
 parser.add_argument("-o", "--output", help="Specify an output file")
+parser.add_argument("-s", "--single", help="Use single core", action="store_true")
 parser.add_argument("-log", "--log-level", default="warning", help="Set the logging level. Example --log-level debug. Default is warning")
 args = parser.parse_args()
 
@@ -82,16 +83,15 @@ def convert_bfres(sbfres: Path) -> None:
 
     res_file: ResFile = ResFile(MemoryStream(bfres))
 
-    if ".Tex1" in sbfres.suffixes: #and res_file.Textures.Values.Max(x.MipCount > 1):
+    if ".Tex1" in sbfres.suffixes and max({i.MipCount for i in list(res_file.Textures.Values)}) > 1:
         tex2: Path = Path(str(sbfres).replace("Tex1", "Tex2"))
         if not tex2.exists():
             raise FileNotFoundError("Could not find Tex2 file for mipmap data.")
 
         res_file_tex2 = ResFile(MemoryStream(util.unyaz_if_needed(tex2.read_bytes())))
-        for tex in res_file_tex2.Textures:
-            idx = res_file_tex2.Textures.index(tex)
-            res_file.Textures[idx].Value.MipSwizzle = tex.Value.Swizzle
-            res_file.Textures[idx].Value.MipData = tex.Value.MipData
+        for texture in list(res_file_tex2.Textures.Values):
+            res_file.Textures[texture.Name].MipSwizzle = texture.Swizzle
+            res_file.Textures[texture.Name].MipData = texture.MipData
 
         name = name.replace("Tex1", "Tex")
         res_file.name = name
@@ -159,7 +159,7 @@ def get_stock_bfstp(bfstp_name: str, bars_file: Path):
 def convert_bflim(sblarc: Path) -> None:
     # Convert bflim files inside a WiiU sblarc
     blarc = oead.Sarc(util.unyaz_if_needed(sblarc.read_bytes()))
-    blarc_path = Path(__file__) / Path(sblarc.name)
+    blarc_path = Path(__file__).parent / Path(sblarc.name)
 
     if any("bflim" in i.name for i in blarc.get_files()):
         # Get the pack file where the sblarc comes from
@@ -241,7 +241,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
             elif "pack" in file.suffix and file.suffix != ".sbquestpack":
                 # Convert files inside of pack files
                 pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
-                pack_path = Path(__file__) / Path(file.name)
+                pack_path = Path(__file__).parent / Path(file.name)
                 if any(splitext(i.name)[1] in supp_formats for i in pack.get_files()):
                     extract_sarc(pack, pack_path)
                     new_files = pack_path.rglob('*.*')
@@ -305,11 +305,15 @@ def convert(mod: Path) -> None:
     try:
 
         with util.TempSettingsContext({"wiiu": False}):
-            with get_context("spawn").Pool(maxtasksperchild=500) as pool:
-                # Convert supported files
-                pool.starmap(convert_files, files)
-                pool.close()
-                pool.join()
+            if not args.single:
+                with get_context("spawn").Pool(maxtasksperchild=500) as pool:
+                    # Convert supported files
+                    pool.starmap(convert_files, files)
+                    pool.close()
+                    pool.join()
+            else:
+                for file,_ in files:
+                    convert_files(file, mod_path)
         
         # Run the mod through BCML's automatic converter first 
         warnings = convert_mod(mod_path, False, True)
