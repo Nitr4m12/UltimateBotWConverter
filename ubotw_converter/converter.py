@@ -94,11 +94,11 @@ def convert_bfres(sbfres: Path) -> None:
             res_file.Textures[texture.Name].MipData = texture.MipData
 
         name = name.replace("Tex1", "Tex")
-        res_file.name = name
+        res_file.Name = name
     
     if not res_file.IsPlatformSwitch:
         res_file.ChangePlatform(True, 4096, 0, 5, 0, 3, ConverterHandle.BOTW)
-        res_file.alignment = 0x0C
+        res_file.Alignment = 0x0C
 
         if sbfres.suffix.startswith(".s"):
             mem = MemoryStream()
