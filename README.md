@@ -13,11 +13,6 @@ For obtaining a BoTW dump, see https://zeldamods.org/wiki/Help:Dumping_games. BC
 # Usage
 ### Linux:
 Open a Terminal window in the script's folder, and run the script with `python converter.py "mod"`, replacing `mod` by your BNP mod/mods, or `path/to/folder/with/bnps/*.bnp` to convert every BNP in a folder.
-To use the included bash script, use 
-```
-chmod +x convert.sh
-./convert.sh "mod"
-```
 ### Windows:
 Open a CMD window in the script's folder, and run the script with `python converter.py "mod"`, replacing `mod` by your BNP mod/mods, or `path\to\folder\with\bnps\*.bnp` to convert every BNP in a folder. You can also drag and drop your BNP(s) into the included bat file.
 
@@ -41,7 +36,7 @@ BCML's converter is still limited, so using other tools to convert those files t
 - NanobotZ - bfstpfixer.py
 - SamusAranX - Original bars_extractor.py script
 - Aaaboy97 - Bars repacker script
-- KillzXGaming - BfresPlatformConverter
+- KillzXGaming - BfresPlatformConverter, BfresLibrary
 - kreny - HKXConvert
 - NiceneNerd - BOTW Cross-Platform Mod Loader
 - HGStone - Bat script and testing
