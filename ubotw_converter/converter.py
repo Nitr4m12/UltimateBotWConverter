@@ -217,6 +217,73 @@ def convert_bflim(sblarc: Path) -> None:
         # Remove the temporary folder
         shutil.rmtree(blarc_path)
 
+def change_platform(file: Path, mod_path: Path) -> None:
+    if file.suffix in BFRES_EXT:
+        # Convert FRES files
+        if ".Tex2" not in file.suffixes:
+            convert_bfres(file)
+
+    elif file.suffix == ".bars":
+        # Convert bars files
+        bars_bytes = bytearray(file.read_bytes())
+        tracks, offsets = bars.get_bars_tracks(bars_bytes)
+        for name, data in tracks.items():
+            # Read the track header and convert appropiately
+            magic: str = data[:0x4].decode("utf-8")
+            try:
+                bfstm_exists = next(mod_path.rglob(name + ".bfstm"))
+            except StopIteration:
+                bfstm_exists = None
+
+            if magic == 'FWAV':
+                tracks[name] = bcf_converter.conv_file(data, magic, '<')
+
+            elif magic == 'FSTP' and bfstm_exists:
+                tracks[name] = bcf_converter.conv_file(data, magic, '<')
+
+            elif magic == 'FSTP' and not bfstm_exists:
+                tracks[name] = get_stock_bfstp(name, file)
+
+            bars_bytes[offsets[name]:offsets[name] + len(tracks[name])] = tracks[name]
+
+        new_bars = bars.convert_bars(bars_bytes, '<')
+        file.write_bytes(bytes(new_bars))
+        print("Successfully converted " + file.name + "!")
+
+    elif file.suffix == ".bfstm":
+        # Convert BFSTM files
+        new_bfstm = bcf_converter.conv_file(file.read_bytes(), "FSTM", '<')
+        file.write_bytes(bytes(new_bfstm))
+        print("Successfully converted " + file.name + "!")
+
+    elif "pack" in file.suffix and file.suffix != ".sbquestpack":
+        # Convert files inside of pack files
+        pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
+        pack_path = Path(__file__).parent / Path(file.name)
+        if any(splitext(i.name)[1] in SUPPORTED for i in pack.get_files()):
+            extract_sarc(pack, pack_path)
+            new_files = pack_path.rglob('*.*')
+            for new in new_files:
+                try:
+                    convert_files(new, pack_path)
+                except Exception as err:
+                    logger.warning(f"{new.relative_to(pack_path)} could not be converted")
+                    logger.debug(err, exc_info=True)
+            write_sarc(pack, pack_path, file)
+            shutil.rmtree(pack_path)
+
+    elif file.suffix == ".sblarc":
+        if file.name == "BootUp.sblarc":
+            logging.warning("A BootUp.sblarc was found! These files are not used on Switch, so it was skipped")
+            file.unlink()
+        else:
+            # Convert bflim files inside of sblarc files
+            convert_bflim(file)
+
+    elif file.suffix in HAVOK_EXT:
+        # Convert havok files
+        convert_havok(file)
+
 def convert_files(file: Path, mod_path: Path) -> None:
     try:
         canon = util.get_canon_name(file.relative_to(mod_path), allow_no_source=True)
@@ -225,72 +292,8 @@ def convert_files(file: Path, mod_path: Path) -> None:
         # Convert supported files
         if file.exists() and file.stat().st_size != 0:
             if is_modded: 
-                if file.suffix in BFRES_EXT:
-                    # Convert FRES files
-                    if ".Tex2" not in file.suffixes:
-                        convert_bfres(file)
-
-                if file.suffix == ".bars":
-                    # Convert bars files
-                    bars_bytes = bytearray(file.read_bytes())
-                    tracks, offsets = bars.get_bars_tracks(bars_bytes)
-                    for name, data in tracks.items():
-                        # Read the track header and convert appropiately
-                        magic: str = data[:0x4].decode("utf-8")
-                        try:
-                            bfstm_exists = next(mod_path.rglob(name + ".bfstm"))
-                        except StopIteration:
-                            bfstm_exists = None
-
-                        if magic == 'FWAV':
-                            tracks[name] = bcf_converter.conv_file(data, magic, '<')
-
-                        elif magic == 'FSTP' and bfstm_exists:
-                            tracks[name] = bcf_converter.conv_file(data, magic, '<')
-
-                        elif magic == 'FSTP' and not bfstm_exists:
-                            tracks[name] = get_stock_bfstp(name, file)
-
-                        bars_bytes[offsets[name]:offsets[name] + len(tracks[name])] = tracks[name]
-
-                    new_bars = bars.convert_bars(bars_bytes, '<')
-                    file.write_bytes(bytes(new_bars))
-                    print("Successfully converted " + file.name + "!")
-
-                elif file.suffix == ".bfstm":
-                    # Convert BFSTM files
-                    new_bfstm = bcf_converter.conv_file(file.read_bytes(), "FSTM", '<')
-                    file.write_bytes(bytes(new_bfstm))
-                    print("Successfully converted " + file.name + "!")
-
-                elif "pack" in file.suffix and file.suffix != ".sbquestpack":
-                    # Convert files inside of pack files
-                    pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
-                    pack_path = Path(__file__).parent / Path(file.name)
-                    if any(splitext(i.name)[1] in SUPPORTED for i in pack.get_files()):
-                        extract_sarc(pack, pack_path)
-                        new_files = pack_path.rglob('*.*')
-                        for new in new_files:
-                            try:
-                                convert_files(new, pack_path)
-                            except Exception as err:
-                                logger.warning(f"{new.relative_to(pack_path)} could not be converted")
-                                logger.debug(err, exc_info=True)
-                        write_sarc(pack, pack_path, file)
-                        shutil.rmtree(pack_path)
-
-                elif file.suffix == ".sblarc":
-                    if file.name == "BootUp.sblarc":
-                        logging.warning("A BootUp.sblarc was found! These files are not used on Switch, so it was skipped")
-                        file.unlink()
-                    else:
-                        # Convert bflim files inside of sblarc files
-                        convert_bflim(file)
-
-                elif file.suffix in HAVOK_EXT:
-                    # Convert havok files
-                    convert_havok(file)
-
+                change_platform(file, mod_path)
+                
             elif file.suffix in NO_CONVERT_EXTS or file.suffix == ".bcamanim":
                 if mod_path.parent != Path(__file__).parent:
                     stock_file = util.get_game_file(file.relative_to(mod_path))
@@ -299,22 +302,28 @@ def convert_files(file: Path, mod_path: Path) -> None:
                 elif "pack" in mod_path.suffix and mod_path.suffix != ".sbquestpack":
                     try:
                         stock_pack = util.get_game_file(f"Actor/Pack/{mod_path.name}")
-                    except:
+                    except FileNotFoundError:
                         try:
                             stock_pack = util.get_game_file(f"Event/{mod_path.name}")
-                        except:
-                            stock_pack = util.get_game_file(f"Pack/{mod_path.name}")
+                        except FileNotFoundError:
+                            try:
+                                stock_pack = util.get_game_file(f"Pack/{mod_path.name}")
+                            except FileNotFoundError:
+                                try:
+                                    stock_pack = util.get_game_file(f"Actor/Pack/{file.name.split('.')[0].replace('_A', '')}.sbactorpack")
+                                except FileNotFoundError:
+                                    try:
+                                        stock_pack = util.get_game_file(f"Event/{file.name.split('.')[0].replace('Event_', '').replace('_Open', '_0')}.sbeventpack")
+                                    except FileNotFoundError:
+                                        change_platform(file, mod_path)
 
-                    stock_file = util.get_nested_file_bytes(f"{stock_pack}//{file.relative_to(mod_path).as_posix()}")
-                    file.write_bytes(stock_file)
+                    if 'stock_pack' in locals():
+                        stock_file = util.get_nested_file_bytes(f"{stock_pack}//{file.relative_to(mod_path).as_posix()}")
+                        file.write_bytes(stock_file)
                 
     except Exception as err:
         logger.warning(f"{file.relative_to(mod_path)} could not be converted")
         logger.debug(err, exc_info=True)
-
-def clean_up() -> None:
-    if Path('HKXConvert').exists():
-        Path('HKXConvert').unlink()
 
 def convert(mod: Path) -> None:
     # Open the mod
