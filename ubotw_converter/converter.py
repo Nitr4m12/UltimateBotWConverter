@@ -220,10 +220,8 @@ def convert_bflim(sblarc: Path) -> None:
 def convert_files(file: Path, mod_path: Path) -> None:
     try:
         canon = util.get_canon_name(file.relative_to(mod_path), allow_no_source=True)
-        with open("error.log", "a") as f:
-            f.write(canon + "\n")
-
         is_modded = is_file_modded(canon, file.read_bytes())
+
         # Convert supported files
         if file.exists() and file.stat().st_size != 0:
             if is_modded: 
@@ -294,9 +292,11 @@ def convert_files(file: Path, mod_path: Path) -> None:
                     convert_havok(file)
 
             elif file.suffix in NO_CONVERT_EXTS or file.suffix == ".bcamanim":
-                # TODO: Add logic for files outside packs
+                if mod_path.parent != Path(__file__).parent:
+                    stock_file = util.get_game_file(file.relative_to(mod_path))
+                    file.write_bytes(stock_file.read_bytes)
                 # TODO: Add logic for stock files inside modified packs
-                if "pack" in mod_path.suffix and mod_path.suffix != ".sbquestpack":
+                elif "pack" in mod_path.suffix and mod_path.suffix != ".sbquestpack":
                     try:
                         stock_pack = util.get_game_file(f"Actor/Pack/{mod_path.name}")
                     except:
