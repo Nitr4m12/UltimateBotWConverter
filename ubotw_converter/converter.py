@@ -47,8 +47,10 @@ parser.add_argument("-s", "--single", help="Use single core", action="store_true
 parser.add_argument("-log", "--log-level", default="warning", help="Set the logging level. Example --log-level debug. Default is warning")
 args = parser.parse_args()
 
+ERROR_LOG = Path(__file__).parent / "error.log"
+
 # Error logging
-logging.basicConfig(filename="error.log", filemode="w", level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s %(message)s")
+logging.basicConfig(filename=ERROR_LOG, filemode="w", level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
 
 def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) -> bool:
@@ -393,5 +395,5 @@ def main() -> None:
     for mod in mods:
         convert(Path(mod))
 
-    if Path("error.log").stat().st_size != 0:
-        print("It seems some files could not be converted. Please check error.log for more info.")
+    if ERROR_LOG.stat().st_size != 0:
+        print(f"It seems some files could not be converted. Please check the error log at {ERROR_LOG} for more info.")
