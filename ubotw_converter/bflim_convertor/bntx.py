@@ -21,85 +21,175 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os.path
-import struct
+from pathlib import Path
+from binary_reader import Reader, InvalidEndiannessError, TemporarySeek
 
-from . import dds
-from . import globals
+# import dds
+import globals
 
-class BNTXHeader(struct.Struct):
-    def __init__(self, bom):
-        super().__init__(bom + '8sIH2BI2H2I')
+# class BNTXHeader():
+#     def __init__(self, bom):
+#         super().__init__(bom + '8sIH2BI2H2I')
 
-    def data(self, data, pos):
-        (self.magic,
-         self.version,
-         self.bom,
-         self.alignmentShift,
-         self.targetAddrSize,
-         self.fileNameAddr,
-         self.flag,
-         self.firstBlkAddr,
-         self.relocAddr,
-         self.fileSize) = self.unpack_from(data, pos)
+#     def data(self, data, pos):
+#         (self.magic,
+#          self.version,
+#          self.bom,
+#          self.alignmentShift,
+#          self.targetAddrSize,
+#          self.fileNameAddr,
+#          self.flag,
+#          self.firstBlkAddr,
+#          self.relocAddr,
+#          self.fileSize) = self.unpack_from(data, pos)
+
+# class TexContainer(struct.Struct):
+#     def __init__(self, bom):
+#         super().__init__(bom + '4sI5qI4x')
+
+#     def data(self, data, pos):
+#         (self.target,
+#          self.count,
+#          self.infoPtrsAddr,
+#          self.dataBlkAddr,
+#          self.dictAddr,
+#          self.memPoolAddr,
+#          self.memPoolPtr,
+#          self.baseMemPoolAddr) = self.unpack_from(data, pos)
+
+# class BlockHeader(struct.Struct):
+    # def __init__(self, bom):
+        # super().__init__(bom + '4s2I4x')
+# 
+    # def data(self, data, pos):
+        # (self.magic,
+        #  self.nextBlkAddr,
+        #  self.blockSize) = self.unpack_from(data, pos)
+
+# class TextureInfo(struct.Struct):
+#     def __init__(self, bom):
+#         super().__init__(bom + '2B4H2x2I3i3I20x3IB3x8q')
+
+#     def data(self, data, pos):
+#         (self.flags,
+#          self.dim,
+#          self.tileMode,
+#          self.swizzle,
+#          self.numMips,
+#          self.numSamples,
+#          self.format_,
+#          self.accessFlags,
+#          self.width,
+#          self.height,
+#          self.depth,
+#          self.arrayLength,
+#          self.textureLayout,
+#          self.textureLayout2,
+#          self.imageSize,
+#          self.alignment,
+#          self.compSel,
+#          self.type_,
+#          self.nameAddr,
+#          self.parentAddr,
+#          self.ptrsAddr,
+#          self.userDataAddr,
+#          self.texPtr,
+#          self.texViewPtr,
+#          self.descSlotDataAddr,
+#          self.userDictAddr) = self.unpack_from(data, pos)
+
+types = {
+    0: "1D", 1: "2D", 2: "3D",
+    3: "Cube", 4: "1D Array", 5: "2D Array",
+    6: "2D Multisample", 7: "2D Multisample Array",
+    8: "Cube Array",
+}
+
+class BntxHeader():
+    def __init__(self, stream):
+        # 8s I H 2B I 2H 2I
+        magic = stream.read_string(8);
+        assert magic == b"BNTX\x00\x00\x00\x00", "Invalid header";
+
+        self.version = stream.read_uint32();
+        bom = stream.read_uint16();
+        self.alignment_shift = stream.read_uint8();
+        self.target_address_size = stream.read_uint8();
+        self.fname_offset = stream.read_uint32();
+        self.flag = stream.read_uint16();
+        self.first_block_offset = stream.read_uint16();
+        self.reloc_offset = stream.read_uint32();
+        file_size = stream.read_uint32();
 
 
-class TexContainer(struct.Struct):
-    def __init__(self, bom):
-        super().__init__(bom + '4sI5qI4x')
 
-    def data(self, data, pos):
-        (self.target,
-         self.count,
-         self.infoPtrsAddr,
-         self.dataBlkAddr,
-         self.dictAddr,
-         self.memPoolAddr,
-         self.memPoolPtr,
-         self.baseMemPoolAddr) = self.unpack_from(data, pos)
+class TexContainer():
+    def __init__(self, stream):
+        # 4s I 5q I 4x
+        self.target = stream.read_string(4);
+        assert [b'NX  ', b'Gen '], "Unsupported target platform!";
 
+        self.count = stream.read_uint32();
+        self.info_ptrs_offset = stream.read_int64();
+        self.data_block_offset = stream.read_int64();
+        self.dict_offset = stream.read_int64();
+        self.memory_pool_offset = stream.read_int64();
+        self.memory_pool_pointer = stream.read_int64();
+        self.base_memory_pool_offset = stream.read_uint32();
 
-class BlockHeader(struct.Struct):
-    def __init__(self, bom):
-        super().__init__(bom + '4s2I4x')
+        stream.skip(4);
 
-    def data(self, data, pos):
-        (self.magic,
-         self.nextBlkAddr,
-         self.blockSize) = self.unpack_from(data, pos)
+class BlockHeader():
+    def __init__(self, stream):
+        # 4s I 5q I 4x
+        self.magic = stream.read_string(4);
+        self.next_block_offset = stream.read_uint32();
+        self.block_size = stream.read_uint32();
 
+        stream.skip(4);
 
-class TextureInfo(struct.Struct):
-    def __init__(self, bom):
-        super().__init__(bom + '2B4H2x2I3i3I20x3IB3x8q')
+class TextureInfo():
+    def __init__(self, stream):
+        # 2B 4H 2x 2I 3i 3I 20x 3I B 3x 8q
+        self.flags = stream.read_uint8();
+        self.dim = stream.read_uint8();
 
-    def data(self, data, pos):
-        (self.flags,
-         self.dim,
-         self.tileMode,
-         self.swizzle,
-         self.numMips,
-         self.numSamples,
-         self.format_,
-         self.accessFlags,
-         self.width,
-         self.height,
-         self.depth,
-         self.arrayLength,
-         self.textureLayout,
-         self.textureLayout2,
-         self.imageSize,
-         self.alignment,
-         self.compSel,
-         self.type_,
-         self.nameAddr,
-         self.parentAddr,
-         self.ptrsAddr,
-         self.userDataAddr,
-         self.texPtr,
-         self.texViewPtr,
-         self.descSlotDataAddr,
-         self.userDictAddr) = self.unpack_from(data, pos)
+        self.tile_mode = stream.read_uint16();
+        self.swizzle = stream.read_uint16();
+        self.mip_num = stream.read_uint16();
+        self.sample_num = stream.read_uint16();
 
+        stream.skip(2)
+
+        self.format_ = stream.read_uint32();
+        self.access_flags = stream.read_uint32();
+
+        self.width = stream.read_int32();
+        self.height = stream.read_int32();
+        self.depth = stream.read_int32();
+
+        self.array_length = stream.read_uint32();
+        self.texture_layout = stream.read_uint32();
+        self.texture_layout2 = stream.read_uint32();
+
+        stream.skip(20)
+
+        self.image_size = stream.read_uint32();
+        self.alignment = stream.read_uint32();
+        self.component_select = stream.read_uint32();
+
+        self.type_ = stream.read_uint8();
+
+        stream.skip(3)
+
+        self.name_offset = stream.read_int64();
+        self.parent_offset = stream.read_int64();
+        self.pointers_offset = stream.read_int64();
+        self.user_data_offset = stream.read_int64();
+        self.texture_ptr = stream.read_int64();
+        self.texture_view_ptr = stream.read_int64();
+        self.description_slot_data_offset = stream.read_int64();
+        self.user_dict_offset = stream.read_int64();
 
 class TexInfo:
     pass
@@ -199,124 +289,113 @@ def getBlockHeight(height):
 
     return blockHeight
 
-def read(file):
-    with open(file, "rb") as inf:
-        f = inf.read()
+def read(file: Path):
+    bntx = file.read_bytes();
 
     pos = 0
 
-    if f[0xc:0xe] == b'\xFF\xFE':
-        bom = '<'
+    if bntx[0xc:0xe] == b'\xFF\xFE':
+        endian = 'little';
 
-    elif f[0xc:0xe] == b'\xFE\xFF':
-        bom = '>'
+    elif bntx[0xc:0xe] == b'\xFE\xFF':
+        endian = 'big';
 
     else:
-        print("Invalid BOM!")
-        return False
+        raise InvalidEndiannessError("Invalid BOM!");
 
-    header = BNTXHeader(bom)
-    header.data(f, pos)
-    pos += header.size
+    stream = Reader(bntx, endian);
 
-    if header.magic != b'BNTX\0\0\0\0':
-        print("Invalid file header!")
-        return False
+    header = BntxHeader(stream);
 
-    fnameLen = struct.unpack(bom + 'H', f[header.fileNameAddr - 2:header.fileNameAddr])[0]
-    fname = bytes_to_string(f[header.fileNameAddr:header.fileNameAddr + fnameLen], fnameLen)
+    with TemporarySeek(stream, header.fname_offset - 2):
+        fname_len = stream.read_uint16();
+        fname = stream.read_string(fname_len).decode("utf-8");
 
-    texContainer = TexContainer(bom)
-    texContainer.data(f, pos)
-    pos += texContainer.size
+    tex_container = TexContainer(stream)
 
-    if texContainer.target not in [b'NX  ', b'Gen ']:
-        print("Unsupported target platform!")
-        return False
-
-    target = 0 if texContainer.target == b'Gen ' else 1
+    target = 0 if tex_container.target == b'Gen ' else 1
 
     textures = []
-    texNames = []
-    texSizes = []
+    tex_names = []
 
-    for i in range(texContainer.count):
-        pos = struct.unpack(bom + 'q', f[texContainer.infoPtrsAddr + i * 8:texContainer.infoPtrsAddr + i * 8 + 8])[0]
+    for i in range(tex_container.count):
+        with TemporarySeek(stream, tex_container.info_ptrs_offset + i * 8):
+            pos = stream.read_int64();
 
-        infoHeader = BlockHeader(bom)
-        infoHeader.data(f, pos)
-        pos += infoHeader.size
+        stream.seek(pos);
 
-        info = TextureInfo(bom)
-        info.data(f, pos)
+        info_header = BlockHeader(stream);
 
-        if infoHeader.magic != b'BRTI':
+        info = TextureInfo(stream);
+
+        if info_header.magic != b'BRTI':
             continue
-
-        nameLen = struct.unpack(bom + 'H', f[info.nameAddr:info.nameAddr + 2])[0]
-        name = bytes_to_string(f[info.nameAddr + 2:info.nameAddr + 2 + nameLen], nameLen)
-
-        compSel = []
-        compSel2 = []
+            
+        with TemporarySeek(stream, info.name_offset):
+            name_len = stream.read_uint16();
+            name = stream.read_string(name_len).decode("utf-8");
+            
+        component_select = [];
+        component_select2 = [];
         for i in range(4):
-            value = (info.compSel >> (8 * (3 - i))) & 0xff
-            compSel2.append(value)
+            value = (info.component_select >> (8 * (3 - i))) & 0xff;
+            component_select2.append(value);
             if value == 0:
-                value = 5 - len(compSel)
+                value = 5 - len(component_select);
 
-            compSel.append(value)
+            component_select.append(value);
 
-        if info.type_ not in globals.types:
-            globals.types[info.type_] = "Unknown"
+        if info.type_ not in types:
+            types[info.type_] = "Unknown";
 
-        dataAddr = struct.unpack(bom + 'q', f[info.ptrsAddr:info.ptrsAddr + 8])[0]
-        mipOffsets = {0: 0}
+        with TemporarySeek(stream, info.pointers_offset):
+            data_offset = stream.read_int64();
 
-        for i in range(1, info.numMips):
-            mipOffset = struct.unpack(bom + 'q', f[info.ptrsAddr + (i * 8):info.ptrsAddr + (i * 8) + 8])[0]
-            mipOffsets[i] = mipOffset - dataAddr
+        mip_offsets = {0: 0};
+
+        for i in range(1, info.mip_num):
+            with TemporarySeek(stream, info.pointers_offset + (i * 8)):
+                mip_offset = stream.read_int64();
+            mip_offsets[i] = mipOffset - data_offset;
 
         tex = TexInfo()
 
-        tex.infoAddr = pos
-        tex.info = info
-        tex.bom = bom
-        tex.target = target
+        tex.info_address = stream.tell();
+        tex.info = info;
+        tex.bom = '<' if endian == "little" else '>';
+        tex.target = target;
 
-        tex.name = name
+        tex.name = name;
 
-        tex.readTexLayout = info.flags & 1
-        tex.sparseBinding = info.flags >> 1
-        tex.sparseResidency = info.flags >> 2
-        tex.dim = info.dim
-        tex.tileMode = info.tileMode
-        tex.numMips = info.numMips
-        tex.width = info.width
-        tex.height = info.height
-        tex.format = info.format_
-        tex.arrayLength = info.arrayLength
-        tex.blockHeightLog2 = info.textureLayout & 7
-        tex.imageSize = info.imageSize
+        tex.read_tex_layout = info.flags & 1;
+        tex.sparse_binding = info.flags >> 1;
+        tex.sparse_residency = info.flags >> 2;
+        tex.dim = info.dim;
+        tex.tile_mode = info.tile_mode;
+        tex.mip_num = info.mip_num;
+        tex.width = info.width;
+        tex.height = info.height;
+        tex.format = info.format_;
+        tex.array_length = info.array_length;
+        tex.block_height_log2 = info.texture_layout & 7;
+        tex.image_size = info.image_size;
 
-        tex.compSel = compSel
-        tex.compSel2 = compSel2
+        tex.component_select = component_select;
+        tex.component_select2 = component_select2;
 
-        tex.alignment = info.alignment
-        tex.type = info.type_
+        tex.alignment = info.alignment;
+        tex.type = info.type_;
 
-        tex.mipOffsets = mipOffsets
-        tex.dataAddr = dataAddr
+        tex.mipOffsets = mip_offsets;
+        tex.data_offset = data_offset;
 
-        tex.data = f[dataAddr:dataAddr + info.imageSize]
+        with TemporarySeek(stream, data_offset):
+            tex.data = stream.read(info.image_size);
 
-        textures.append(tex)
-        texNames.append(name)
-        texSizes.append(info.imageSize)
+        textures.append(tex);
+        tex_names.append(name);
 
-    globals.fileData = bytearray(f)
-    globals.texSizes = texSizes
-
-    return fname, texContainer.target.decode('utf-8'), textures, texNames
+    return fname, tex_container.target.decode('utf-8'), textures, tex_names;
 
 
 def decode(tex):
