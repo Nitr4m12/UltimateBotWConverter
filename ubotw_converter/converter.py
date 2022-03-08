@@ -223,7 +223,7 @@ def convert_bflim(sblarc: Path) -> None:
         # Remove the temporary folder
         shutil.rmtree(blarc_path)
 
-def change_platform(file: Path, mod_path: Path) -> None:
+def change_platform(file: Path, mod_path: Path, real_mod_path: Path = None) -> None:
     if file.suffix in BFRES_EXT:
         # Convert FRES files
         if ".Tex2" not in file.suffixes:
@@ -265,17 +265,20 @@ def change_platform(file: Path, mod_path: Path) -> None:
     elif "pack" in file.suffix and file.suffix != ".sbquestpack":
         # Convert files inside of pack files
         pack = oead.Sarc(util.unyaz_if_needed(file.read_bytes()))
-        pack_path = Path(__file__).parent / Path(file.name)
+        pack_path = SCRIPT / file.name
         if any(splitext(i.name)[1] in SUPPORTED for i in pack.get_files()):
-            extract_sarc(pack, pack_path)
-            new_files = pack_path.rglob('*.*')
-            for new in new_files:
-                try:
-                    convert_files(new, pack_path)
-                except Exception as err:
-                    logger.warning(f"{new.relative_to(pack_path)} could not be converted")
-                    logger.debug(err, exc_info=True)
-            write_sarc(pack, pack_path, file)
+            try:
+                extract_sarc(pack, pack_path)
+                new_files = pack_path.rglob('*.*')
+                for new in new_files:
+                    try:
+                        change_platform(new, pack_path, mod_path)
+                    except Exception as err:
+                        logger.warning(f"{new.relative_to(pack_path)} could not be converted")
+                        logger.debug(err, exc_info=True)
+                write_sarc(pack, pack_path, file)
+                
+            finally:
             shutil.rmtree(pack_path)
 
     elif file.suffix == ".sblarc":
