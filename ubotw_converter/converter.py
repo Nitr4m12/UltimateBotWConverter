@@ -10,10 +10,12 @@ from json import loads
 from pathlib import Path
 from multiprocessing import get_context
 from typing import Union
+import sys
 import shutil
 import argparse
 import traceback
 import logging
+import logging.config
 import xxhash
 
 from bcml.install import open_mod, find_modded_files
