@@ -279,7 +279,7 @@ def change_platform(file: Path, mod_path: Path, real_mod_path: Path = None) -> N
                 write_sarc(pack, pack_path, file)
                 
             finally:
-            shutil.rmtree(pack_path)
+                shutil.rmtree(pack_path)
 
     elif file.suffix == ".sblarc":
         if file.name == "BootUp.sblarc":
@@ -304,9 +304,9 @@ def convert_files(file: Path, mod_path: Path) -> None:
                 change_platform(file, mod_path)
                 
             elif file.suffix in NO_CONVERT_EXTS or file.suffix == ".bcamanim":
-                if mod_path.parent != Path(__file__).parent:
-                    stock_file = util.get_game_file(file.relative_to(mod_path))
-                    file.write_bytes(stock_file.read_bytes)
+                if mod_path.parent != SCRIPT:
+                    stock_file = util.get_game_file(file.relative_to(mod_path / "content"))
+                    file.write_bytes(stock_file.read_bytes())
                 # TODO: Add logic for stock files inside modified packs
                 elif "pack" in mod_path.suffix and mod_path.suffix != ".sbquestpack":
                     try:
@@ -327,8 +327,11 @@ def convert_files(file: Path, mod_path: Path) -> None:
                                         change_platform(file, mod_path)
 
                     if 'stock_pack' in locals():
-                        stock_file = util.get_nested_file_bytes(f"{stock_pack}//{file.relative_to(mod_path).as_posix()}")
-                        file.write_bytes(stock_file)
+                        try:
+                            stock_file = util.get_nested_file_bytes(f"{stock_pack}//{file.relative_to(mod_path).as_posix()}")
+                            file.write_bytes(stock_file)
+                        except:
+                            change_platform(file, mod_path)
                 
     except Exception as err:
         logger.warning(f"{file.relative_to(mod_path)} could not be converted")
