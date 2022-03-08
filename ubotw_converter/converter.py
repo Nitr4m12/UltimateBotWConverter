@@ -223,7 +223,7 @@ def convert_bflim(sblarc: Path) -> None:
         # Remove the temporary folder
         shutil.rmtree(blarc_path)
 
-def change_platform(file: Path, mod_path: Path, real_mod_path: Path = None) -> None:
+def change_platform(file: Path, mod_path: Path, root_mod_path: Path = None) -> None:
     if file.suffix in BFRES_EXT:
         # Convert FRES files
         if ".Tex2" not in file.suffixes:
@@ -237,8 +237,11 @@ def change_platform(file: Path, mod_path: Path, real_mod_path: Path = None) -> N
             # Read the track header and convert appropiately
             magic: str = data[:0x4].decode("utf-8")
             try:
-                bfstm_exists = next(mod_path.rglob(name + ".bfstm"))
-            except StopIteration:
+                try:
+                    bfstm_exists = next(mod_path.rglob(name + ".bfstm"))
+                except StopIteration:
+                    bfstm_exists = next(root_mod_path.rglob(name + ".bfstm"))
+            except:
                 bfstm_exists = None
 
             if magic == 'FWAV':
