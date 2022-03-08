@@ -23,6 +23,8 @@ from .bars_py import bars, bcf_converter
 from .bflim_convertor import bntx_dds_injector as bntx
 import oead
 
+SCRIPT: Path = Path(__file__).parent
+
 # Import dll libraries
 BFRES_DLL = Path(__file__).parent / "dotnet_libs" / "BfresLibrary"
 import clr
@@ -34,7 +36,7 @@ from BfresLibrary.PlatformConverters import ConverterHandle
 # Supported formats
 SUPPORTED = [".sbfres", ".sbitemico", ".hkcl", ".hkrg", ".shknm2", ".bars", ".bfstm", ".bflim", ".sblarc", ".bcamanim"]
 
-BFRES_EXT = [".sbfres", ".sbitemico"]#, ".bcamanim"]
+BFRES_EXT = [".sbfres", ".sbitemico", ".bcamanim"]
 HAVOK_EXT = [".hkcl", ".hkrg", ".shknm2"]
 LAYOUT_EXT = [".bflan", ".bgsh", ".bnsh", ".bushvt", ".bflyt", ".bflim", ".bntx"]
 SOUND_EXT = [".bfstm", ".bfstp", ".bfwav", ".bars"]
@@ -47,10 +49,11 @@ parser.add_argument("-s", "--single", help="Use single core", action="store_true
 parser.add_argument("-log", "--log-level", default="warning", help="Set the logging level. Example --log-level debug. Default is warning")
 args = parser.parse_args()
 
-ERROR_LOG = Path(__file__).parent / "error.log"
+LOG_CONF = SCRIPT / "log.conf"
+ERROR_LOG = SCRIPT / "error.log"
 
 # Error logging
-logging.basicConfig(filename=ERROR_LOG, filemode="w", level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s %(message)s")
+logging.config.fileConfig(fname=LOG_CONF, defaults={"logfilename": ERROR_LOG, "loglevel": args.log_level.upper()})
 logger = logging.getLogger(__name__)
 
 def is_file_modded(name: str, file: Union[bytes, Path], count_new: bool = True) -> bool:
@@ -99,6 +102,7 @@ def write_sarc(sarc: oead.Sarc, sarc_path: Path, sarc_file: Path) -> None:
         sarc_file.write_bytes(oead.yaz0.compress(new_sarc.write()[1]))
 
 def convert_bfres(sbfres: Path) -> None:
+    # Based on https://github.com/KillzXGaming/BfresPlatformConverter
     name: str = sbfres.stem
     ext: str = sbfres.suffix
 
@@ -121,7 +125,7 @@ def convert_bfres(sbfres: Path) -> None:
     
     if not res_file.IsPlatformSwitch:
         res_file.ChangePlatform(True, 4096, 0, 5, 0, 3, ConverterHandle.BOTW)
-        res_file.Alignment = 0x0C
+        res_file.Alignment = 0x08 if sbfres.suffix == ".bcamanim" else 0x0C
 
         if sbfres.suffix.startswith(".s"):
             mem = MemoryStream()
@@ -330,22 +334,22 @@ def convert_files(file: Path, mod_path: Path) -> None:
 def convert(mod: Path) -> None:
     # Open the mod
     mod_path = open_mod(mod)
-    if (mod_path / "info.json").exists():
-        meta = loads((mod_path / "info.json").read_text("utf-8"))
-    if meta["platform"] == "switch":
-        raise RuntimeError("Ultimate BotW Converter does not support Switch to Wii U conversion yet!")
-
-    files = []
-    for file in mod_path.rglob("*.*"):
-        if "content" in file.parts or "aoc" in file.parts:
-            files.append((file, mod_path))
-
     try:
+        if (mod_path / "info.json").exists():
+            meta = loads((mod_path / "info.json").read_text("utf-8"))
 
+        if meta["platform"] == "switch":
+            raise NotImplementedError("Ultimate BotW Converter does not support Switch to Wii U conversion")
+
+        files = []
+        for file in mod_path.rglob("*.*"):
+            if "content" in file.parts or "aoc" in file.parts:
+                files.append((file, mod_path))
+
+        # Convert supported files
         with util.TempSettingsContext({"wiiu": False}):
             if not args.single:
                 with get_context("spawn").Pool(maxtasksperchild=500) as pool:
-                    # Convert supported files
                     pool.starmap(convert_files, files)
                     pool.close()
                     pool.join()
@@ -353,13 +357,14 @@ def convert(mod: Path) -> None:
                 for file,_ in files:
                     convert_files(file, mod_path)
         
-        # Run the mod through BCML's automatic converter first 
+        # Run the mod through BCML's automatic converter 
         warnings = convert_mod(mod_path, False, True)
 
         # Pack the converted mod into a new bnp
         out = Path(f'{args.output}.bnp') if args.output else mod.with_name(f"{mod.stem}_switch.bnp")
         if Path(out).exists():
             Path(out).unlink()
+
         x_args = [
             util.get_7z_path(),
             "a",
@@ -370,16 +375,14 @@ def convert(mod: Path) -> None:
 
         # Write BCML's warning to a file
         if warnings:
-            with open("error.log", "a", encoding="utf-8") as file:
+            with open(ERROR_LOG, "a", encoding="utf-8") as file:
                 for warning in warnings:
                     # Write BCML's warning to a file    
                     if all(i not in warning for i in SUPPORTED):
                         logger.warning(warning)
 
     except Exception as err:
-        # logging.exception(err)
         print(traceback.format_exc())
-        # clean_up()
 
     finally:
         # Remove the temporary mod_path
