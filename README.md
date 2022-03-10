@@ -9,7 +9,7 @@ A script combining various sources to convert BotW WiiU mods for the Switch vers
 For obtaining a BoTW dump, see https://zeldamods.org/wiki/Help:Dumping_games. BCML can be obtained through python's PyPI, using `pip install bcml`
 
 ## Installation
-Run `pip install ubotw-converter` from a Command-Line Interface(CLI).  
+For now, you can install the prerelease by running `pip install ubotw-converter` from a Command-Line Interface(CLI).  
 
 If wanting to install from source, run `pip install -e .` inside the folder where the source code is located 
 
