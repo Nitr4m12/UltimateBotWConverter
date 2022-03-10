@@ -41,4 +41,5 @@ BCML's converter is still limited, so using other tools to convert those files t
 - [krenyy](https://gitlab.com/krenyy) - HKXConvert
 - [NiceneNerd](https://github.com/NiceneNerd) - BOTW Cross-Platform Mod Loader
 - [Leoetlino](https://github.com/leoetlino) - All his tools for working with BotW files
+- The creators of [Pythonnet](https://github.com/pythonnet)
 - [HGStone](https://github.com/HGStone) - Bat script and testing
