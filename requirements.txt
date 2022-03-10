@@ -1,2 +1,2 @@
-bcml~=3.8.0
-pythonnet~=3.0.0a2
+bcml>=3.8.0
+pythonnet>=3.0.0a2
