@@ -28,7 +28,9 @@ import oead
 SCRIPT: Path = Path(__file__).parent
 
 # Import dll libraries
-BFRES_DLL = Path(__file__).parent / "dotnet_libs" / "BfresLibrary"
+BFRES_DLL = SCRIPT / "dotnet_libs" / "BfresLibrary"
+sys.path.insert(1, str(SCRIPT / "pythonnet"))
+
 import clr
 clr.AddReference(str(BFRES_DLL))
 from System.IO import MemoryStream, File
@@ -143,7 +145,7 @@ def convert_bfres(sbfres: Path) -> None:
 
 def convert_havok(hkx: Path) -> None:
     # Convert havok files unsupported by BCML
-    hkx_c = Path(__file__).parent / "HKXConvert.exe" if system() == "Windows" else Path(__file__).parent / "HKXConvert"
+    hkx_c = SCRIPT / "HKXConvert.exe" if system() == "Windows" else SCRIPT / "HKXConvert"
     # Make sure we can run the program by setting the correct permissions
     hkx_c.chmod(0o755)
 
@@ -185,21 +187,21 @@ def get_stock_bfstp(bfstp_name: str, bars_file: Path):
             stock_tracks, stock_offsets = bars.get_bars_tracks(bytearray(stock_bars.data))
     return stock_tracks[bfstp_name]
 
-def convert_bflim(sblarc: Path) -> None:
+def convert_bflim(sblarc: Path, pack_name: str) -> None:
     # Convert bflim files inside a WiiU sblarc
     blarc = oead.Sarc(util.unyaz_if_needed(sblarc.read_bytes()))
-    blarc_path = Path(__file__).parent / Path(sblarc.name)
+    blarc_path = SCRIPT / sblarc.name
 
     if any("bflim" in i.name for i in blarc.get_files()):
         # Get the pack file where the sblarc comes from
-        stock_pack = util.get_game_file(f"Pack/{sblarc.parent.parent.name}")
+        stock_pack = util.get_game_file(f"Pack/{pack_name}")
 
-        if sblarc.parent.parent.name == "Bootup.pack":
+        if pack_name == "Bootup.pack":
             # If the sblarc is in Bootup.pack, get a stock Common.sblarc
             stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Common.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
 
-        elif sblarc.parent.parent.name == "Title.pack":
+        elif pack_name == "Title.pack":
             # If the sblarc is in Title.pack, get a stock Title.sblarc
             stock_sblarc = oead.Sarc(stock_pack.read_bytes()).get_file("Layout/Title.sblarc")
             stock_blarc = oead.Sarc(util.unyaz_if_needed(stock_sblarc.data))
@@ -212,7 +214,7 @@ def convert_bflim(sblarc: Path) -> None:
         for bflim in blarc_path.rglob('*.bflim'):
             try:
                 # Inject every bflim found into the bntx file
-                bntx.tex_inject(blarc_path / bntx_file.name, bflim, False)
+                bntx.tex_inject(blarc_path / bntx_file.name, bflim)
                 Path(bflim).unlink()
             except Exception as err:
                 if Path(f'{bflim.stem}.dds').exists():
@@ -277,7 +279,7 @@ def change_platform(file: Path, mod_path: Path, root_mod_path: Path = None) -> N
                 new_files = pack_path.rglob('*.*')
                 for new in new_files:
                     try:
-                        change_platform(new, pack_path, mod_path)
+                        convert_files(new, pack_path, mod_path)
                     except Exception as err:
                         logger.warning(f"{new.relative_to(pack_path)} could not be converted")
                         logger.debug(err, exc_info=True)
@@ -292,13 +294,13 @@ def change_platform(file: Path, mod_path: Path, root_mod_path: Path = None) -> N
             file.unlink()
         else:
             # Convert bflim files inside of sblarc files
-            convert_bflim(file)
+            convert_bflim(file, mod_path.name)
 
     elif file.suffix in HAVOK_EXT:
         # Convert havok files
         convert_havok(file)
 
-def convert_files(file: Path, mod_path: Path) -> None:
+def convert_files(file: Path, mod_path: Path, root_mod_path = None) -> None:
     try:
         canon = util.get_canon_name(file.relative_to(mod_path), allow_no_source=True)
         is_modded = is_file_modded(canon, file.read_bytes())
@@ -306,7 +308,7 @@ def convert_files(file: Path, mod_path: Path) -> None:
         # Convert supported files
         if file.exists() and file.stat().st_size != 0:
             if is_modded: 
-                change_platform(file, mod_path)
+                change_platform(file, mod_path, root_mod_path)
                 
             elif file.suffix in NO_CONVERT_EXTS or file.suffix == ".bcamanim":
                 if mod_path.parent != SCRIPT:

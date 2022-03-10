@@ -131,86 +131,105 @@ def readFLIM(f):
     flim.height = info.height
 
     if info.format_ == 0x00:
-        flim.format = 0x01
+        flim.format = 0x01 # L8
+        flim.dds_format = 0x201
         flim.compSel = [0, 0, 0, 5]
 
     elif info.format_ == 0x01:
-        flim.format = 0x01
+        flim.format = 0x01 # L8
+        flim.dds_format = 0x201
         flim.compSel = [5, 5, 5, 0]
 
     elif info.format_ == 0x02:
-        flim.format = 0x02
+        flim.format = 0x02 # A4L4
+        flim.dds_format = 0x101
         flim.compSel = [0, 0, 0, 1]
 
     elif info.format_ == 0x03:
-        flim.format = 0x07
+        flim.format = 0x07 # A8L8
+        flim.dds_format = 0x901
         flim.compSel = [0, 0, 0, 1]
 
     elif info.format_ in [0x05, 0x19]:
-        flim.format = 0x08
+        flim.format = 0x08 # BGR565
+        flim.dds_format = 0x701
         flim.compSel = [2, 1, 0, 5]
 
     elif info.format_ == 0x06:
-        flim.format = 0x1a
+        flim.format = 0x1a # ABGR8
+        flim.dds_format = 0xb01
         flim.compSel = [0, 1, 2, 5]
 
     elif info.format_ == 0x07:
-        flim.format = 0x0a
+        flim.format = 0x0a # A1BGR5
+        flim.dds_format = 0x501
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x08:
-        flim.format = 0x0b
+        flim.format = 0x0b # ABGR4
+        flim.dds_format = 0x301
         flim.compSel = [2, 1, 0, 3]
 
     elif info.format_ == 0x09:
-        flim.format = 0x1a
+        flim.format = 0x1a # ABGR8
+        flim.dds_format = 0xb01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x0a:
-        flim.format = 0x31
+        flim.format = 0x31 # ETC1
         flim.format_ = "ETC1"
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x0C:
-        flim.format = 0x31
+        flim.format = 0x31 # DXT1
         flim.format_ = "BC1"
+        flim.dds_format = 0x1a01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x0D:
-        flim.format = 0x32
+        flim.format = 0x32 # DXT3
+        flim.dds_format = 0x1b01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x0E:
-        flim.format = 0x33
+        flim.format = 0x33 # DXT5
+        flim.dds_format = 0x1c01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ in [0x0F, 0x10]:
-        flim.format = 0x34
+        flim.format = 0x34 # DX10
+        flim.dds_format = 0x1d01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x11:
-        flim.format = 0x35
+        flim.format = 0x35 # DX10
+        flim.dds_format = 0x1e01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x14:
-        flim.format = 0x41a
+        flim.format = 0x41a # ABGR8
+        flim.dds_format = 0xb01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x15:
-        flim.format = 0x431
+        flim.format = 0x431 # DXT1
         flim.format_ = "BC1"
+        flim.dds_format = 0x1a01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x16:
-        flim.format = 0x432
+        flim.format = 0x432 # DXT3
+        flim.dds_format = 0x1b01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x17:
-        flim.format = 0x433
+        flim.format = 0x433 # DXT5
+        flim.dds_format = 0x1c01
         flim.compSel = [0, 1, 2, 3]
 
     elif info.format_ == 0x18:
-        flim.format = 0x19
+        flim.format = 0x19 # A2RGB10
+        flim.dds_format = 0xe01
         flim.compSel = [0, 1, 2, 3]
 
     else:
@@ -263,28 +282,28 @@ def readFLIM(f):
 
 
 def get_deswizzled_data(flim):
-    if flim.format == 0x01:
+    if flim.format == 0x01: # L8
         format_ = 61
 
-    elif flim.format == 0x02:
+    elif flim.format == 0x02: # A4L4
         format_ = 112
 
-    elif flim.format == 0x07:
+    elif flim.format == 0x07: # A8L8
         format_ = 49
 
-    elif flim.format == 0x08:
+    elif flim.format == 0x08: # BGR565
         format_ = 85
 
-    elif flim.format == 0x0a:
+    elif flim.format == 0x0a: # A1BGR5
         format_ = 86
 
-    elif flim.format == 0x0b:
+    elif flim.format == 0x0b: # ABGR4
         format_ = 115
 
-    elif flim.format in [0x1a, 0x41a]:
+    elif flim.format in [0x1a, 0x41a]: # ABGR8
         format_ = 28
 
-    elif flim.format == 0x19:
+    elif flim.format == 0x19: # A2RGB10
         format_ = 24
 
     elif flim.format in [0x31, 0x431]:
