@@ -238,7 +238,7 @@ def read(file):
 
     target = 0 if texContainer.target == b'Gen ' else 1
 
-    textures = []
+    textures = {}
     texNames = []
     texSizes = []
 
@@ -311,14 +311,13 @@ def read(file):
 
         tex.data = f[dataAddr:dataAddr + info.imageSize]
 
-        textures.append(tex)
-        texNames.append(name)
+        textures[name] = tex
         texSizes.append(info.imageSize)
 
     globals.fileData = bytearray(f)
     globals.texSizes = texSizes
 
-    return fname, texContainer.target.decode('utf-8'), textures, texNames
+    return fname, texContainer.target.decode('utf-8'), textures
 
 def decode(tex):
     if (tex.format >> 8) in globals.blk_dims:

@@ -15,23 +15,20 @@ def tex_inject(bntx: Path, bflim: Path):
     bntx_file = BNTX.read(bntx)
 
     # Store the name, target, textures and tex_names of the bntx file
-    name, target, textures, tex_names = bntx_file
-
-    # Join the textures with their corresponding names into an dict for ease of use
-    list_item = dict(zip(tex_names, textures))
+    name, target, textures = bntx_file
 
     # Store the texture name as a variable
-    o_tex = ' '.join([x for x in tex_names if x == bflim.stem])
+    o_tex = ' '.join([x for x in textures.keys() if x == bflim.stem])
 
     # Set up the variables for import the dds file
-    tile_mode = list_item[o_tex].tileMode
-    srgb = list_item[o_tex].format & 0xFF == 6
-    sparse_binding = bool(list_item[o_tex].sparseBinding)
-    sparse_residency = bool(list_item[o_tex].sparseResidency)
+    tile_mode = textures[o_tex].tileMode
+    srgb = textures[o_tex].format & 0xFF == 6
+    sparse_binding = bool(textures[o_tex].sparseBinding)
+    sparse_residency = bool(textures[o_tex].sparseResidency)
 
-    old_tex_size = list_item[o_tex].imageSize
-    old_tex_num_mips = list_item[o_tex].numMips
-    tex_ = BNTX.inject(list_item[o_tex], 1, srgb, sparse_binding, sparse_residency, old_tex_size, flim)
+    old_tex_size = textures[o_tex].imageSize
+    old_tex_num_mips = textures[o_tex].numMips
+    tex_ = BNTX.inject(textures[o_tex], 1, srgb, sparse_binding, sparse_residency, old_tex_size, flim)
 
     if tex_:
         # Write to the bntx
