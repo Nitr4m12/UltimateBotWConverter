@@ -1,3 +1,5 @@
+**PSA**: BCML's new update has broken compatibility with this script. Please install version 3.8.0 if you want to make use of it. This can be done using `pip install bcml==3.8.0'
+
 # Ultimate BotW Converter
 A script combining various sources to convert BotW WiiU mods for the Switch version of the game
 
