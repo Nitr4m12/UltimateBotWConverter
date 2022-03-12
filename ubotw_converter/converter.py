@@ -217,8 +217,6 @@ def convert_bflim(sblarc: Path, pack_name: str) -> None:
                 bntx.tex_inject(blarc_path / bntx_file.name, bflim)
                 Path(bflim).unlink()
             except Exception as err:
-                if Path(f'{bflim.stem}.dds').exists():
-                    Path(f'{bflim.stem}.dds').unlink()
                 logging.warning(f"{bflim.relative_to(blarc_path)} could not be converted")
                 logging.debug(err, exc_info=True)
         # Write the new blarc file
