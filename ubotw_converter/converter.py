@@ -29,7 +29,6 @@ SCRIPT: Path = Path(__file__).parent
 
 # Import dll libraries
 BFRES_DLL = SCRIPT / "dotnet_libs" / "BfresLibrary"
-sys.path.insert(0, str(SCRIPT / "pythonnet"))
 
 import clr
 clr.AddReference(str(BFRES_DLL))
