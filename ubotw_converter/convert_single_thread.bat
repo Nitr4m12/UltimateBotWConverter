@@ -14,7 +14,7 @@ echo.
 set /A COUNTER+=1
 echo Attempting to convert !COUNTER! of %TOTAL% mods, please wait...
 echo.
-python converter.py %%A
+python converter.py -s %%A
 )
 echo.
 echo Processed %COUNTER% mods.
